@@ -1,0 +1,29 @@
+{
+  "name": "beszel-startos",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "check": "tsc --noEmit",
+    "build": "rm -rf ./javascript && ncc build startos/index.ts -o ./javascript && chmod -R 755 ./javascript",
+    "pack": "make",
+    "prettier": "prettier --write startos"
+  },
+  "dependencies": {
+    "@start9labs/start-sdk": "2.0.9"
+  },
+  "overrides": {
+    "@start9labs/start-sdk": "$@start9labs/start-sdk"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "@vercel/ncc": "^0.38.3",
+    "typescript": "^5.9.0",
+    "prettier": "^3.6.2"
+  },
+  "prettier": {
+    "trailingComma": "all",
+    "tabWidth": 2,
+    "semi": false,
+    "singleQuote": true
+  }
+}

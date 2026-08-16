@@ -1,0 +1,3 @@
+[submodule "upstream-project"]
+	path = upstream-project
+	url = https://github.com/henrygd/beszel.git
