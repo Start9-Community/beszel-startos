@@ -1,44 +1,207 @@
-# Beszel for StartOS
+<p align="center">
+  <img src="icon.svg" alt="Beszel Logo" width="21%" />
+</p>
 
-This repository packages [Beszel](https://github.com/henrygd/beszel) for StartOS. It currently pins the Hub and Agent images to `0.18.7` for `x86_64` and `aarch64`.
+# Beszel on StartOS
 
-StartOS package versions follow `<beszel-version>:<package-revision>`. A new Beszel version starts at revision `0`, and StartOS-only updates increment the revision, such as `0.18.7:1`, `0.18.7:2`, and `0.18.7:3`.
+> Everything not listed in this document should behave the same as upstream
+> Beszel. If a feature, setting, or behavior is not mentioned here, the
+> upstream documentation is accurate and fully applicable — see the
+> Documentation section of `instructions.md` for links.
 
-## Quick start (StartOS)
+[Beszel](https://github.com/henrygd/beszel) is a lightweight server monitoring hub: a web dashboard that collects metrics from agents running on the machines you want to watch. This package runs the hub, and optionally an agent alongside it — but that agent sees the service's own container, not the StartOS host.
 
-Install Beszel from the start9.tabordalab.com (TabordaLab StartOS registry), or sideload the `.s9pk` package.
+- **Upstream repo:** <https://github.com/henrygd/beszel>
+- **Wrapper repo:** <https://github.com/Start9-Community/beszel-startos>
 
-<img width="1879" height="911" alt="image" src="https://github.com/user-attachments/assets/30075831-ee6c-4096-8a0e-f5a437a8108f" />
+---
 
-## Package architecture
+## Table of Contents
 
-- `beszel` runs the upstream Hub on port 8090 and persists `/beszel_data` in the `main` volume.
-- The optional `local-agent` daemon runs the matching upstream agent image and persists `/var/lib/beszel-agent` in the `agent` volume.
-- The packaged local agent connects directly to the Hub at `http://127.0.0.1:8090`, so local registration does not depend on the configured public Hub URL, TLS trust, or the StartOS reverse proxy/WebSocket path.
-- Hub data and agent state are both included in StartOS backups.
+- [Image and Container Runtime](#image-and-container-runtime)
+- [Volume and Data Layout](#volume-and-data-layout)
+- [File Models](#file-models)
+- [Dependencies](#dependencies)
+- [Network Access and Interfaces](#network-access-and-interfaces)
+- [Installation and First-Run Flow](#installation-and-first-run-flow)
+- [Actions](#actions)
+- [Tasks](#tasks)
+- [Health Checks](#health-checks)
+- [Backups and Restore](#backups-and-restore)
+- [Limitations and Differences](#limitations-and-differences)
+- [Quick Reference for AI Consumers](#quick-reference-for-ai-consumers)
 
-The **Configure Local Agent** StartOS action implements Beszel's supported universal-token registration flow. It stores the public key in `hub.pub`, the token in a mode-0600 `universal-token` file, and non-secret settings in `config.json`. Runtime configuration uses `KEY_FILE` and `TOKEN_FILE`; the token is not embedded in the package, emitted in package logs, passed on the agent command line/environment, or returned when the configuration form is reopened.
+---
 
-The action is prompted as an important task on fresh install rather than a critical task. This is intentional: the Hub must start so the user can create the first normal account and obtain a permanent universal token from **Settings > Tokens**. Beszel 0.18.7 rejects universal-token API use by PocketBase superusers, and its authenticated API does not provide a safe unauthenticated bootstrap mechanism. The package does not store Beszel login credentials or modify PocketBase tables.
+## Image and Container Runtime
 
-## Registration and identity
+Two upstream images, unmodified, each running its own entrypoint.
 
-`SYSTEM_NAME` defaults to `StartOS` and is configurable. The optional primary temperature sensor is passed to the agent as `PRIMARY_SENSOR`; leave it blank to use Beszel's automatic selection. Beszel creates a system when the enabled agent first connects with an active universal token. The persistent agent fingerprint prevents duplication across ordinary restarts and updates as long as the configured token is retained.
+| Property      | Value                                    |
+| ------------- | ---------------------------------------- |
+| Images        | `henrygd/beszel`, `henrygd/beszel-agent` |
+| Architectures | x86_64, aarch64                          |
+| Command       | `sdk.useEntrypoint()` for both           |
 
-Beszel associates fingerprint records with the token used during registration. Changing the agent token after registration can therefore create a duplicate system even when the fingerprint is unchanged. The action warns about this behavior. Fingerprint deletion/reset is not automated.
+| Subcontainer   | Purpose                                                  |
+| -------------- | -------------------------------------------------------- |
+| `beszel`       | The hub daemon — the one to `attach` to                  |
+| `beszel-agent` | The optional `local-agent` daemon; absent unless enabled |
 
-## Host visibility limitation
+**Both images are `FROM scratch`** — a single static Go binary plus a CA bundle, with no shell, no `/etc/passwd`, and no `/etc/group`. Subcontainer exec resolves a user against those files, so `main.ts` writes a minimal pair into each subcontainer before the daemon spawns. This is also why the agent's health check execs `/agent health` directly rather than going through a shell: there is no shell to go through.
 
-The StartOS SDK's package mount API exposes only package volumes, assets, backups, and declared dependency volumes. It does not expose arbitrary host paths, the host root filesystem, `/var/run/docker.sock`, or a containerd socket. Consequently, the packaged agent monitors the resource view available inside the service's isolated runtime and cannot enumerate other StartOS services. Full host metrics and Docker/container statistics are not claimed by this integration.
+## Volume and Data Layout
 
-The local-agent readiness check verifies that its listener is running. Registration/authentication failures remain visible in the upstream agent logs without the package printing credential values; an end-to-end online-state check is not possible without storing a Beszel user session.
+Two volumes, deliberately separate so the agent's identity survives independently of the hub's database.
 
-## Development
+| Volume  | Mount Point             | Contents                                                                      |
+| ------- | ----------------------- | ----------------------------------------------------------------------------- |
+| `main`  | `/beszel_data`          | The hub's PocketBase database — accounts, systems, historical metrics, alerts |
+| `agent` | `/var/lib/beszel-agent` | `config.json`, `hub.pub`, `universal-token`, and the agent's own fingerprint  |
 
-```sh
-npm run check
-npm run build
-make
+The mount points are fixed by the images: `/beszel_data` is the hub's declared `VOLUME`, and the agent reads its credentials from the paths given in `KEY_FILE`/`TOKEN_FILE`.
+
+## File Models
+
+Four models, all StartOS-side state. Beszel's own configuration is held in its PocketBase database, which this package neither reads nor writes; everything the package controls reaches the hub as an environment variable at launch.
+
+| Model                | File                                       | Seeded by                 | Rewritten by              |
+| -------------------- | ------------------------------------------ | ------------------------- | ------------------------- |
+| `hubConfigJson`      | `/beszel_data/startos-wrapper-config.json` | `merge({})` at init       | **Configure Hub**         |
+| `agentConfigJson`    | `/var/lib/beszel-agent/config.json`        | `merge({})` at init       | **Configure Local Agent** |
+| `hubPublicKeyFile`   | `/var/lib/beszel-agent/hub.pub`            | **Configure Local Agent** | **Configure Local Agent** |
+| `universalTokenFile` | `/var/lib/beszel-agent/universal-token`    | **Configure Local Agent** | **Configure Local Agent** |
+
+Nothing is re-asserted behind the user's back — the two actions are the only writers, and each `merge({})` at init only fills a key that is missing. A hand edit survives and takes effect, because `main.ts` reads all four reactively: a change restarts the affected daemon.
+
+`universal-token` is written mode 0600 and is the one secret the package holds. It is passed to the agent as a _file path_, never as an argument or an environment value, is redacted out of the agent's forwarded stdout/stderr, and is never returned when the action's form is reopened — leaving that field blank keeps the stored value.
+
+## Dependencies
+
+None.
+
+## Network Access and Interfaces
+
+One interface, serving the dashboard and Beszel's own API on the same port.
+
+| Interface | Id       | Type | Port | Description                                                         |
+| --------- | -------- | ---- | ---- | ------------------------------------------------------------------- |
+| Web UI    | `web-ui` | ui   | 8090 | Dashboard for viewing system metrics and managing monitored systems |
+
+The agent listens on 45876 but is **not** exported, because the only client is the hub in the same service, reached over loopback at `http://127.0.0.1:8090`. That is deliberate: local registration then does not depend on the published hub URL, on TLS trust, or on the StartOS reverse proxy.
+
+## Installation and First-Run Flow
+
+Two things must happen in order, and the second cannot be automated.
+
+**The hub needs a non-local address before it will start.** Beszel bakes `APP_URL` into the links it generates and the install commands it shows for remote agents, so the package resolves it from the Web UI interface's published addresses — preferring a public one, then any non-local one. A server with no LAN, Tor, or domain address published for that interface has nothing to resolve, and `main.ts` throws rather than starting the hub on a URL that would send users nowhere. **Configure Hub** pins a specific choice if the automatic one is wrong.
+
+**The local agent has to be configured by hand, after an account exists.** Beszel issues a universal token only to a signed-in normal user (0.18.7 rejects universal-token API use by a PocketBase superuser), and offers no unauthenticated bootstrap. So the package cannot register itself at install time: the user creates an account in Beszel's own UI, copies a token and the hub's public key out of it, and pastes them into **Configure Local Agent**. This is why that task is `important` rather than `critical` — a `critical` task would block the hub from starting, and the hub has to be running to produce the token that clears it.
+
+## Actions
+
+Two, both user-facing.
+
+### Configure Hub
+
+Run it when the address Beszel advertises is wrong — generated links point somewhere unreachable, or a remote agent's install command names the wrong host. It writes `startos-wrapper-config.json` and restarts the hub, a few seconds' interruption. Idempotent.
+
+The Primary URL field offers only addresses StartOS currently publishes for the Web UI interface, and the save is rejected if the chosen one is no longer among them. An empty dropdown therefore means no address is published for that interface — not a package fault.
+
+The optional heartbeat calls an external endpoint on an interval; it is off unless a URL is given, and the URL is stored verbatim rather than reduced to an origin, since these endpoints carry a path.
+
+### Configure Local Agent
+
+Run it once after creating a Beszel account, and again only to change the system name, the sensor, or the credentials. It writes the three files in the `agent` volume and restarts the service; enabling it adds the `local-agent` daemon, disabling it removes the daemon on the next start.
+
+**Repeating it with a _new_ token is the one unsafe case.** Beszel ties a fingerprint record to the token used at registration, so changing the token after a successful registration can create a second system for the same machine even though the fingerprint is unchanged. Remove the old system in Beszel first if that is the intent. Re-running with the token field blank keeps the stored token and is safe.
+
+Validation happens at save time: with the agent enabled, a missing key, token, or system name is rejected, as is a public key that is not in OpenSSH `authorized_keys` form.
+
+## Tasks
+
+Two, both `important`, so neither blocks the service from starting.
+
+| Task                          | Raised when                                                                               | Cleared by                                             |
+| ----------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| Choose the primary Beszel URL | The stored Primary URL is unset, or is not among the currently published Web UI addresses | **Configure Hub** saving a currently-published address |
+| Configure the local agent     | Install only                                                                              | **Configure Local Agent** saving                       |
+
+The hub-URL task can return: removing or replacing the address it names raises it again on the next init pass. The local-agent task is raised on install and not again — a later `init` does not re-raise it, so a user who dismisses it and then wants the agent runs the action from the Actions list directly.
+
+## Health Checks
+
+Two, the second present only when the local agent is enabled.
+
+| Check         | Displayed       | Method                                                                    |
+| ------------- | --------------- | ------------------------------------------------------------------------- |
+| `beszel`      | "Web Interface" | HTTP GET against the hub on loopback                                      |
+| `local-agent` | "Local Agent"   | `/agent health` inside the agent's subcontainer, after a 30s grace period |
+
+A hub check that stays red past the first few seconds means the process is failing, not warming up — the service log carries the reason, and the usual one is an `APP_URL` the hub rejected.
+
+The agent check answers "is the listener running", **not** "is it registered with the hub" — an end-to-end registration check would require the package to hold a Beszel user session, which it deliberately does not. The two failure modes therefore look different:
+
+- **A malformed public key** makes the agent exit at startup, so the row shows the supervisor's own `local-agent daemon crashed` rather than this package's message, and the agent's parse error repeats in the service log on each retry.
+- **A bad or revoked token** lets the agent run, so the row goes **green** while no system ever appears in Beszel's systems table. That combination is the tell.
+
+Either way the agent's own output is forwarded into the service log with the stored token filtered out, so the log is safe to share.
+
+## Backups and Restore
+
+Both volumes are copied wholesale — `sdk.Backups.ofVolumes('main', 'agent')`. Nothing is dumped or excluded, so a restore brings back the hub's accounts, systems, and full metric history, along with the agent's credentials and fingerprint.
+
+Because the fingerprint is inside the backup, a restored agent re-registers as the _same_ system rather than creating a duplicate. That is the reason for the separate `agent` volume, and the reason deleting it to resolve a registration conflict is a bad idea: the agent comes back as a new machine.
+
+## Limitations and Differences
+
+1. **The local agent monitors this service's container, not the StartOS host.** A StartOS package can mount its own volumes, its assets, and a declared dependency's volumes — not arbitrary host paths, the host root, or a container runtime socket. So the agent reports the resource view inside its own isolated runtime: it cannot enumerate other StartOS services, and host storage and network figures will not match the machine. Monitoring the host itself needs an agent installed outside StartOS.
+2. **Docker statistics are unavailable** for the same reason — there is no runtime socket to read.
+3. **Registration cannot be automated.** The universal token has to be copied out of Beszel's UI by hand, because Beszel issues one only to an authenticated normal user.
+4. **The hub will not start without a published non-local address** for its Web UI interface.
+
+---
+
+## Quick Reference for AI Consumers
+
+```yaml
+package_id: beszel
+image: henrygd/beszel # plus henrygd/beszel-agent for the optional local agent
+architectures:
+  - x86_64
+  - aarch64
+subcontainers:
+  - beszel # the hub
+  - beszel-agent # only when the local agent is enabled
+volumes:
+  main: /beszel_data
+  agent: /var/lib/beszel-agent
+file_models:
+  - /beszel_data/startos-wrapper-config.json
+  - /var/lib/beszel-agent/config.json
+  - /var/lib/beszel-agent/hub.pub
+  - /var/lib/beszel-agent/universal-token
+startos_managed_env_vars:
+  - APP_URL
+  - HEARTBEAT_URL
+  - HEARTBEAT_INTERVAL
+  - HEARTBEAT_METHOD
+  - LISTEN
+  - SYSTEM_NAME
+  - KEY_FILE
+  - TOKEN_FILE
+  - HUB_URL
+  - PRIMARY_SENSOR
+dependencies: none
+interfaces:
+  web-ui: { type: ui, port: 8090 }
+actions:
+  - set-hub-config
+  - configure-local-agent
+tasks:
+  - { action: set-hub-config, severity: important }
+  - { action: configure-local-agent, severity: important }
+health_checks:
+  - beszel # displayed "Web Interface"
+  - local-agent # displayed "Local Agent"; only when enabled
 ```
-
-`make` creates architecture-specific `.s9pk` files using the workspace's `start-cli` configuration.
