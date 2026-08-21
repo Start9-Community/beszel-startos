@@ -9,7 +9,7 @@
 > upstream documentation is accurate and fully applicable — see the
 > Documentation section of `instructions.md` for links.
 
-[Beszel](https://github.com/henrygd/beszel) is a lightweight server monitoring hub: a web dashboard that collects metrics from agents running on the machines you want to watch. This package runs the hub, and optionally an agent alongside it — but that agent sees the service's own container, not the StartOS host.
+[Beszel](https://github.com/henrygd/beszel) is a lightweight server monitoring hub: a web dashboard that collects metrics from agents running on the machines you want to watch. This package runs the hub, and optionally an agent alongside it that monitors the StartOS server itself.
 
 - **Upstream repo:** <https://github.com/henrygd/beszel>
 - **Wrapper repo:** <https://github.com/Start9-Community/beszel-startos>
@@ -118,6 +118,8 @@ Run it once after creating a Beszel account, and again only to change the system
 
 Validation happens at save time: with the agent enabled, a missing key, token, or system name is rejected, as is a public key that is not in OpenSSH `authorized_keys` form.
 
+**What the registered system actually reports is the host, not the container.** The agent runs in its own subcontainer, but StartOS does not mask `/proc`, so CPU, memory, swap, load average and uptime come through as the server's own — and the agent's filesystem stats resolve to the partition its rootfs overlays, which is the one holding package data. Measured against a running server: the agent reported 31.2 GB memory total and 1839 GB disk with 1240 GB used, against a host reading 31.2 GB and 1839 GB / 1241 GB. Only the per-service breakdown is missing, for the reason in [Limitations](#limitations-and-differences).
+
 ## Tasks
 
 Two, both `important`, so neither blocks the service from starting.
@@ -155,10 +157,9 @@ Because the fingerprint is inside the backup, a restored agent re-registers as t
 
 ## Limitations and Differences
 
-1. **The local agent monitors this service's container, not the StartOS host.** A StartOS package can mount its own volumes, its assets, and a declared dependency's volumes — not arbitrary host paths, the host root, or a container runtime socket. So the agent reports the resource view inside its own isolated runtime: it cannot enumerate other StartOS services, and host storage and network figures will not match the machine. Monitoring the host itself needs an agent installed outside StartOS.
-2. **Docker statistics are unavailable** for the same reason — there is no runtime socket to read.
-3. **Registration cannot be automated.** The universal token has to be copied out of Beszel's UI by hand, because Beszel issues one only to an authenticated normal user.
-4. **The hub will not start without a published non-local address** for its Web UI interface.
+1. **The local agent reports no per-service breakdown.** A StartOS package cannot mount a container runtime socket, so Beszel's Docker-statistics feature has nothing to read: `container_stats` stays empty, and the systems table shows one aggregate figure per resource rather than a row per service. Everything else it reports is genuine host data — see [Health Checks](#health-checks).
+2. **Registration cannot be automated.** The universal token has to be copied out of Beszel's UI by hand, because Beszel issues one only to an authenticated normal user.
+3. **The hub will not start without a published non-local address** for its Web UI interface.
 
 ---
 

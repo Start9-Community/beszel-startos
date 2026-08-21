@@ -11,7 +11,7 @@
 
 Beszel exposes a **Web UI** interface: the dashboard where you add machines, watch their metrics, and set up alerts.
 
-You also get an optional **local agent** — a second process, alongside the dashboard, that reports metrics for this service. It is off until you configure it, and worth knowing what it can see: it reports on Beszel's own container, not on your StartOS server. See [Limitations](#limitations) below.
+You also get an optional **local agent** — a second process, alongside the dashboard, that monitors this StartOS server. It is off until you configure it; turning it on is the last section of [Getting set up](#getting-set-up).
 
 Machines you actually want to monitor — your laptop, a VPS, another server — run Beszel's own agent installed on them directly, exactly as the upstream guide describes. Nothing about that changes here.
 
@@ -47,4 +47,4 @@ If the system never appears, check this service's Logs tab — a wrong token or 
 
 ## Limitations
 
-**The local agent reports on Beszel's own container, not on your StartOS server.** StartOS keeps each service isolated, so the agent cannot see other services, the host's disks, or the host's network — the CPU, memory, and storage figures it reports describe its own sandbox, and Docker statistics aren't available at all. To monitor the server itself, install Beszel's agent on a machine outside StartOS.
+**The local agent can't break its figures down per service.** Its CPU, memory, swap, disk, and uptime readings are your server's real totals, but Beszel's Docker-statistics panel stays empty — a StartOS service can't reach the container runtime, so there's nothing to build a per-service breakdown from. You get one number per resource for the whole machine, not a row per service.
