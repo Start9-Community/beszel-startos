@@ -1,41 +1,13 @@
+import { promises as fs } from 'node:fs'
 import { i18n } from '../i18n'
-import { agentConfigJson } from '../fileModels/agentConfig'
+import {
+  agentConfigJson,
+  hubPublicKeyFile,
+  universalTokenFile,
+} from '../fileModels/agentConfig'
 import { sdk } from '../sdk'
 
 const { InputSpec, Value } = sdk
-const agentVolume = sdk.volumes.agent
-
-async function readAgentFile(subpath: string): Promise<string> {
-  try {
-    return String(await agentVolume.readFile(subpath, 'utf8')).trim()
-  } catch {
-    return ''
-  }
-}
-
-async function readAgentConfig(): Promise<{
-  enabled: boolean
-  systemName: string
-  primarySensor: string
-}> {
-  try {
-    const raw = await agentVolume.readFile('config.json', 'utf8')
-    const parsed = JSON.parse(String(raw)) as Record<string, unknown>
-    return {
-      enabled: parsed.enabled === true,
-      systemName:
-        typeof parsed.systemName === 'string' && parsed.systemName.trim()
-          ? parsed.systemName.trim()
-          : 'StartOS',
-      primarySensor:
-        typeof parsed.primarySensor === 'string'
-          ? parsed.primarySensor.trim()
-          : '',
-    }
-  } catch {
-    return { enabled: false, systemName: 'StartOS', primarySensor: '' }
-  }
-}
 
 const inputSpec = InputSpec.of({
   enabled: Value.toggle({
@@ -93,45 +65,50 @@ export const configureLocalAgent = sdk.Action.withInput(
     visibility: 'enabled',
   },
   inputSpec,
+
   async () => {
-    const config = await readAgentConfig()
-    const hubPublicKey = await readAgentFile('hub.pub')
+    const config = await agentConfigJson.read().once()
     return {
-      enabled: config.enabled,
-      systemName: config.systemName,
-      primarySensor: config.primarySensor || null,
-      hubPublicKey: hubPublicKey || null,
-      // Never send a stored secret back through the action-input RPC.
+      enabled: config?.enabled ?? false,
+      systemName: config?.systemName || 'StartOS',
+      primarySensor: config?.primarySensor || null,
+      hubPublicKey: (await hubPublicKeyFile.read().once())?.trim() || null,
+      // A stored secret is never sent back through the action-input RPC.
       universalToken: null,
     }
   },
+
   async ({ effects, input }) => {
-    const savedHubPublicKey = await readAgentFile('hub.pub')
-    const savedUniversalToken = await readAgentFile('universal-token')
-    const hubPublicKey = input.hubPublicKey?.trim() || savedHubPublicKey
-    const universalToken = input.universalToken?.trim() || savedUniversalToken
+    const hubPublicKey =
+      input.hubPublicKey?.trim() ||
+      (await hubPublicKeyFile.read().once())?.trim() ||
+      ''
+    const universalToken =
+      input.universalToken?.trim() ||
+      (await universalTokenFile.read().once())?.trim() ||
+      ''
     const systemName = input.systemName.trim()
-    const primarySensor = input.primarySensor?.trim() || ''
 
     if (input.enabled && (!hubPublicKey || !universalToken || !systemName)) {
       throw new Error(
-        'Hub public key, universal token, and system name are required when the local agent is enabled',
+        i18n(
+          'Hub public key, universal token, and system name are all required when the local agent is enabled.',
+        ),
       )
     }
     if (input.enabled && !hubPublicKey.startsWith('ssh-')) {
       throw new Error(
-        'Hub public key must be in OpenSSH authorized_keys format',
+        i18n('Hub public key must be in OpenSSH authorized_keys format.'),
       )
     }
 
-    await agentVolume.writeFile('hub.pub', hubPublicKey, { mode: 0o644 })
-    await agentVolume.writeFile('universal-token', universalToken, {
-      mode: 0o600,
-    })
+    await hubPublicKeyFile.write(effects, hubPublicKey)
+    await universalTokenFile.write(effects, universalToken)
+    await fs.chmod(universalTokenFile.path, 0o600)
     await agentConfigJson.merge(effects, {
       enabled: input.enabled,
       systemName: systemName || 'StartOS',
-      primarySensor,
+      primarySensor: input.primarySensor?.trim() || '',
     })
 
     return {

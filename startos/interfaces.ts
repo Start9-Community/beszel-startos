@@ -1,18 +1,17 @@
+import { i18n } from './i18n'
 import { sdk } from './sdk'
-import { httpPort, log, webInterfaceId, webMultiHostId } from './utils'
+import { httpPort, webInterfaceId, webMultiHostId } from './utils'
 
 export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
-  log('Setting up web interface', {
-    interfaceId: webInterfaceId,
-    multiHostId: webMultiHostId,
-    httpPort,
-  })
+  const multi = sdk.MultiHost.of(effects, webMultiHostId)
+  const multiOrigin = await multi.bindPort(httpPort, { protocol: 'http' })
 
   const webInterface = sdk.createInterface(effects, {
-    name: 'Web UI',
+    name: i18n('Web UI'),
     id: webInterfaceId,
-    description:
+    description: i18n(
       'Web-based dashboard for viewing system metrics and managing monitored systems',
+    ),
     type: 'ui',
     masked: false,
     schemeOverride: null,
@@ -20,23 +19,6 @@ export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
     path: '',
     query: {},
   })
-  log('Web interface descriptor created', {
-    interfaceId: webInterfaceId,
-    name: 'Web UI',
-    type: 'ui',
-  })
 
-  const multi = sdk.MultiHost.of(effects, webMultiHostId)
-  log('Binding web interface port', {
-    multiHostId: webMultiHostId,
-    httpPort,
-    protocol: 'http',
-  })
-  const multiOrigin = await multi.bindPort(httpPort, { protocol: 'http' })
-  const receipt = await multiOrigin.export([webInterface])
-  log('Web interface exported', {
-    interfaceId: webInterfaceId,
-    receipt,
-  })
-  return [receipt]
+  return [await multiOrigin.export([webInterface])]
 })

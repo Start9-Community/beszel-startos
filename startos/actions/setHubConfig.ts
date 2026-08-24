@@ -14,28 +14,21 @@ import {
 
 const { InputSpec, Value } = sdk
 
-async function readHubConfig(): Promise<HubConfig> {
-  try {
-    const config = await hubConfigJson.read().once()
-    return config ?? { ...hubConfigDefaults }
-  } catch {
-    return { ...hubConfigDefaults }
-  }
-}
+const readHubConfig = async (): Promise<HubConfig> =>
+  (await hubConfigJson.read().once()) ?? hubConfigDefaults
 
+// Normalizing to an origin would strip a path the endpoint needs, so the
+// heartbeat URL is validated but kept verbatim.
 function validateHeartbeatUrl(value: string | null | undefined): string {
   const heartbeatUrl = value?.trim() ?? ''
 
   if (!heartbeatUrl) return ''
 
   try {
-    const parsed = new URL(heartbeatUrl)
-
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      throw new Error()
-    }
+    const { protocol } = new URL(heartbeatUrl)
+    if (protocol !== 'http:' && protocol !== 'https:') throw new Error()
   } catch {
-    throw new Error('Heartbeat URL must be a valid HTTP or HTTPS URL.')
+    throw new Error(i18n('Heartbeat URL must be a valid HTTP or HTTPS URL.'))
   }
 
   return heartbeatUrl
@@ -63,9 +56,7 @@ const inputSpec = InputSpec.of({
       default: canonicalUrl,
       disabled:
         urls.length === 0
-          ? i18n(
-              'No Beszel Web UI URLs are currently available in StartOS.',
-            )
+          ? i18n('No Beszel Web UI URLs are currently available in StartOS.')
           : false,
     }
   }),
@@ -82,9 +73,7 @@ const inputSpec = InputSpec.of({
 
   heartbeatInterval: Value.number({
     name: i18n('Heartbeat Interval'),
-    description: i18n(
-      'Interval in seconds between heartbeat requests.',
-    ),
+    description: i18n('Interval in seconds between heartbeat requests.'),
     required: true,
     default: hubConfigDefaults.heartbeatInterval,
     integer: true,
@@ -140,14 +129,16 @@ export const setHubConfig = sdk.Action.withInput(
     const primaryUrl = normalizeOrigin(input.primaryUrl)
 
     if (!primaryUrl) {
-      throw new Error('Primary URL must be a valid HTTP or HTTPS URL.')
+      throw new Error(i18n('Primary URL must be a valid HTTP or HTTPS URL.'))
     }
 
     const availableUrls = await getWebUiInterfaceUrls(effects)
 
     if (!availableUrls.includes(primaryUrl)) {
       throw new Error(
-        'Primary URL must be one of the Web UI URLs currently exposed by StartOS.',
+        i18n(
+          'Primary URL must be one of the Web UI addresses currently published by StartOS.',
+        ),
       )
     }
 
@@ -163,7 +154,9 @@ export const setHubConfig = sdk.Action.withInput(
     return {
       version: '1',
       title: i18n('Hub Configuration Saved'),
-      message: i18n('The Beszel Hub configuration has been saved. If Beszel is running, it will restart automatically to apply the changes.'),
+      message: i18n(
+        'The Beszel Hub configuration has been saved. If Beszel is running, it will restart automatically to apply the changes.',
+      ),
       result: null,
     }
   },

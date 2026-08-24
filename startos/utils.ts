@@ -1,7 +1,6 @@
 import { type T } from '@start9labs/start-sdk'
 import { sdk } from './sdk'
 
-export const packageLogPrefix = 'beszel-startos'
 export const serviceName = 'beszel'
 export const subcontainerName = 'beszel'
 export const webInterfaceId = 'web-ui'
@@ -11,21 +10,21 @@ export const agentPort = 45876
 
 export const localHubUrl = `http://127.0.0.1:${httpPort}`
 
+// Both mountpoints are fixed by the upstream images: /beszel_data is the hub's
+// declared VOLUME, and the agent's KEY_FILE/TOKEN_FILE are written under the other.
 export const mountVolume = {
-  volumeId: 'main' as const,
-  subpath: null as string | null,
+  volumeId: 'main',
+  subpath: null,
   mountpoint: '/beszel_data',
   readonly: false,
-  type: 'directory' as const,
-}
+} as const
 
 export const agentMountVolume = {
-  volumeId: 'agent' as const,
-  subpath: null as string | null,
+  volumeId: 'agent',
+  subpath: null,
   mountpoint: '/var/lib/beszel-agent',
   readonly: false,
-  type: 'directory' as const,
-}
+} as const
 
 function normalizedHostname(hostname: string): string {
   return hostname.toLowerCase().replace(/\.$/, '')
@@ -110,57 +109,31 @@ export function selectCanonicalBase(urls: string[]): string {
   return normalizeOrigins(urls).sort(compareCanonicalUrls)[0] ?? ''
 }
 
-export function getWebUiInterfaceUrls(
-  effects: T.Effects,
-): Promise<string[]> {
+export function getWebUiInterfaceUrls(effects: T.Effects): Promise<string[]> {
   return sdk.host
     .getOwn(effects, webMultiHostId, (host) => {
-      const iface =
-        host &&
-        Object.values(host.bindings)
-          .flatMap((binding) => Object.values(binding.interfaces))
-          .find((iface) => iface.id === webInterfaceId)
-
-      if (!iface) return []
-
-      return normalizeOrigins(iface.addressInfo.nonLocal.format()).sort(
+      const addresses = Object.values(host?.bindings ?? {})
+        .flatMap((binding) => Object.values(binding.interfaces))
+        .find((iface) => iface.id === webInterfaceId)?.addressInfo
+      if (!addresses) return []
+      return normalizeOrigins(addresses.nonLocal.format()).sort(
         compareCanonicalUrls,
       )
     })
     .const()
 }
 
-export function discoverCanonicalHubUrl(
-  effects: T.Effects,
-): Promise<string> {
+export function discoverCanonicalHubUrl(effects: T.Effects): Promise<string> {
   return sdk.host
     .getOwn(effects, webMultiHostId, (host) => {
-      const iface =
-        host &&
-        Object.values(host.bindings)
-          .flatMap((binding) => Object.values(binding.interfaces))
-          .find((iface) => iface.id === webInterfaceId)
-
-      if (!iface) return ''
-
-      const publicUrl = selectCanonicalBase(
-        iface.addressInfo.public.format(),
-      )
-
-      if (publicUrl) return publicUrl
-
-      return selectCanonicalBase(
-        iface.addressInfo.nonLocal.format(),
+      const addresses = Object.values(host?.bindings ?? {})
+        .flatMap((binding) => Object.values(binding.interfaces))
+        .find((iface) => iface.id === webInterfaceId)?.addressInfo
+      if (!addresses) return ''
+      return (
+        selectCanonicalBase(addresses.public.format()) ||
+        selectCanonicalBase(addresses.nonLocal.format())
       )
     })
     .const()
-}
-
-export function log(message: string, details?: unknown) {
-  const prefix = `[${packageLogPrefix} ${new Date().toISOString()}]`
-  if (details === undefined) {
-    console.log(`${prefix} ${message}`)
-  } else {
-    console.log(`${prefix} ${message}`, details)
-  }
 }
