@@ -11,7 +11,7 @@
 
 Beszel exposes a **Web UI** interface: the dashboard where you add machines, watch their metrics, and set up alerts.
 
-This package includes Beszel `0.18.8` for both the hub and the bundled agent. This release adds battery and fan monitoring on supported machines and improves agent reconnections.
+This package includes Beszel `0.19.0` for both the hub and the bundled agent. This release adds ZFS monitoring and additional alerts on supported machines, with fixes for agent metrics and hub reliability.
 
 You also get an optional **local agent** — a second process, alongside the dashboard, that monitors this StartOS server. It is off until you configure it; turning it on is the last section of [Getting set up](#getting-set-up).
 
@@ -32,6 +32,12 @@ If those links point somewhere you don't want, run **Configure Hub** and choose 
 
 The same action offers an optional **Heartbeat URL**: an endpoint Beszel calls on a schedule so an external monitor can tell it's alive. Leave it blank unless you have one.
 
+### Connecting remote agents over HTTPS
+
+Agents from `0.19.0` onward verify the hub's HTTPS certificate. If your chosen Web UI address uses a StartOS certificate or another private certificate authority, copy that authority's PEM certificate to each remote agent and set `CA_CERT_FILE` to its path. For a container agent, mount the certificate into the container and use the container path. Restart the remote agent after changing its configuration.
+
+The bundled local agent connects internally over HTTP and needs no certificate configuration.
+
 ### Enabling the local agent
 
 1. In Beszel, go to **Settings → Tokens**, enable the universal token, and set it to **Permanent**. Copy it.
@@ -49,4 +55,6 @@ If the system never appears, check this service's Logs tab — a wrong token or 
 
 ## Limitations
 
-**The local agent can't break its figures down per service.** Its CPU, memory, swap, disk, and uptime readings are your server's real totals, but Beszel's Docker-statistics panel stays empty — a StartOS service can't reach the container runtime, so there's nothing to build a per-service breakdown from. You get one number per resource for the whole machine, not a row per service.
+**The local agent can't break its figures down per service.** Its CPU, memory, swap, and disk readings report server totals, but Beszel's Docker-statistics panel stays empty because a StartOS service can't reach the container runtime. Container health alerts are unavailable for the same reason. Uptime depends on what the service's runtime exposes.
+
+Systemd failure alerts and full ZFS monitoring need an agent installed on the monitored host with access to the required services, devices, and utilities.

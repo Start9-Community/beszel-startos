@@ -35,7 +35,7 @@
 
 ## Image and Container Runtime
 
-Two upstream images, unmodified, each running its own entrypoint. Both use Beszel `0.18.8`, pinned to immutable multi-architecture image digests in `startos/manifest/index.ts`.
+Two upstream images, unmodified, each running its own entrypoint. Both use Beszel `0.19.0`, pinned to immutable multi-architecture image digests in `startos/manifest/index.ts`.
 
 The package does not build upstream source and requires no `upstream-project` checkout or Git submodule. Its license and icon are regular files included in this repository.
 
@@ -91,6 +91,8 @@ One interface, serving the dashboard and Beszel's own API on the same port.
 | Web UI    | `web-ui` | ui   | 8090 | Dashboard for viewing system metrics and managing monitored systems |
 
 The agent listens on 45876 but is **not** exported, because the only client is the hub in the same service, reached over loopback at `http://127.0.0.1:8090`. That is deliberate: local registration then does not depend on the published hub URL, on TLS trust, or on the StartOS reverse proxy.
+
+Starting with agent `0.19.0`, remote agents verify the hub's HTTPS certificate. If the published address uses a StartOS or other private CA, provide its PEM certificate to each remote agent through `CA_CERT_FILE`, using a path readable inside that agent's runtime. The bundled agent uses local HTTP and needs no additional CA configuration.
 
 ## Installation and First-Run Flow
 
@@ -159,9 +161,10 @@ Because the fingerprint is inside the backup, a restored agent re-registers as t
 
 ## Limitations and Differences
 
-1. **The local agent reports no per-service breakdown.** A StartOS package cannot mount a container runtime socket, so Beszel's Docker-statistics feature has nothing to read: `container_stats` stays empty, and the systems table shows one aggregate figure per resource rather than a row per service. Everything else it reports is genuine host data — see [Health Checks](#health-checks).
+1. **The local agent reports no per-service breakdown.** A StartOS package cannot mount a container runtime socket, so Beszel's Docker-statistics feature has nothing to read: `container_stats` stays empty, and the systems table shows aggregate figures. Container health alerts also require that socket. Linux uptime now comes from `/proc/uptime`; its meaning depends on the runtime's time namespace.
 2. **Registration cannot be automated.** The universal token has to be copied out of Beszel's UI by hand, because Beszel issues one only to an authenticated normal user.
 3. **The hub will not start without a published non-local address** for its Web UI interface.
+4. **Host integrations require access to their data.** The bundled scratch agent has no systemd service manager or ZFS utilities. Use an agent installed on the monitored host for systemd failure alerts and full ZFS monitoring.
 
 ---
 
