@@ -15,14 +15,14 @@ export const manifest = setupManifest({
     beszel: {
       source: {
         dockerTag:
-          'henrygd/beszel:0.19.0@sha256:fefb27166f5e1611ebf67f8697ea928a23f44efdb00af922e2ac3b5faa2efd5c',
+          'henrygd/beszel:0.20.0@sha256:897e807a065adf8e89e30ae0cd79d1f5e38fe84ccaffbc418bde9d3cdca4eacc',
       },
       arch: ['x86_64', 'aarch64'],
     },
     'beszel-agent': {
       source: {
         dockerTag:
-          'henrygd/beszel-agent:0.19.0@sha256:00c88600e7d120128f623b2deb5257603d464e841fd68f88cc791dcc075f9e46',
+          'henrygd/beszel-agent:0.20.0@sha256:765e3d4a087c4bcbf6b78ed0f1dfdcd669c4bf6ad5789a832d2944603ae7fd08',
       },
       arch: ['x86_64', 'aarch64'],
     },

@@ -35,7 +35,7 @@
 
 ## Image and Container Runtime
 
-Two upstream images, unmodified, each running its own entrypoint. Both use Beszel `0.19.0`, pinned to immutable multi-architecture image digests in `startos/manifest/index.ts`.
+Two upstream images, unmodified, each running its own entrypoint. Both use Beszel `0.20.0`, pinned to immutable multi-architecture image digests in `startos/manifest/index.ts`. The StartOS package version is `0.20.0:0`.
 
 The package does not build upstream source and requires no `upstream-project` checkout or Git submodule. Its license and icon are regular files included in this repository.
 
@@ -50,7 +50,7 @@ The package does not build upstream source and requires no `upstream-project` ch
 | `beszel`       | The hub daemon — the one to `attach` to                  |
 | `beszel-agent` | The optional `local-agent` daemon; absent unless enabled |
 
-**Both images are `FROM scratch`**, with a static Go binary, no shell, no `/etc/passwd`, and no `/etc/group`. The hub also includes a public CA bundle. Subcontainer exec resolves a user against the account files, so `main.ts` writes a minimal pair into each subcontainer before the daemon spawns. The agent's health check execs `/agent health` directly because the image has no shell.
+**Both images are `FROM scratch`**, with a static Go binary, a public CA bundle, no shell, no `/etc/passwd`, and no `/etc/group`. Subcontainer exec resolves a user against the account files, so `main.ts` writes a minimal pair into each subcontainer before the daemon spawns. The agent's health check execs `/agent health` directly because the image has no shell.
 
 ## Volume and Data Layout
 
@@ -94,6 +94,8 @@ The agent listens on 45876 but is **not** exported, because the only client is t
 
 Starting with agent `0.19.0`, remote agents verify the hub's HTTPS certificate. If the published address uses a StartOS or other private CA, provide its PEM certificate to each remote agent through `CA_CERT_FILE`, using a path readable inside that agent's runtime. The bundled agent uses local HTTP and needs no additional CA configuration.
 
+Beszel `0.20.0` adds agent-based HTTP, TCP, DNS, and ICMP network monitors, configured in the dashboard. Probes originate from the selected agent, so their targets must be reachable from that agent. HTTPS probes use the image's system CA bundle; `CA_CERT_FILE` configures the agent's hub connection, not network-monitor trust. The wrapper does not enable upstream trusted-header authentication, so `TRUSTED_PROXY_IPS` needs no package setting.
+
 ## Installation and First-Run Flow
 
 Two things must happen in order, and the second cannot be automated.
@@ -122,7 +124,7 @@ Run it once after creating a Beszel account, and again only to change the system
 
 Validation happens at save time: with the agent enabled, a missing key, token, or system name is rejected, as is a public key that is not in OpenSSH `authorized_keys` form.
 
-**What the registered system actually reports is the host, not the container.** The agent runs in its own subcontainer, but StartOS does not mask `/proc`, so CPU, memory, swap, load average and uptime come through as the server's own — and the agent's filesystem stats resolve to the partition its rootfs overlays, which is the one holding package data. Measured against a running server: the agent reported 31.2 GB memory total and 1839 GB disk with 1240 GB used, against a host reading 31.2 GB and 1839 GB / 1241 GB. Only the per-service breakdown is missing, for the reason in [Limitations](#limitations-and-differences).
+**The local agent can report host resource totals from its subcontainer.** Earlier StartOS validation found that CPU, memory, swap, and load average reflected the server, while filesystem stats resolved to the partition holding package data. Those measurements predate this upgrade. Uptime and host integrations depend on the runtime's exposed files, namespaces, devices, and utilities; see [Limitations](#limitations-and-differences).
 
 ## Tasks
 
@@ -161,10 +163,12 @@ Because the fingerprint is inside the backup, a restored agent re-registers as t
 
 ## Limitations and Differences
 
-1. **The local agent reports no per-service breakdown.** A StartOS package cannot mount a container runtime socket, so Beszel's Docker-statistics feature has nothing to read: `container_stats` stays empty, and the systems table shows aggregate figures. Container health alerts also require that socket. Linux uptime now comes from `/proc/uptime`; its meaning depends on the runtime's time namespace.
+1. **The local agent reports no per-service breakdown.** A StartOS package cannot mount a container runtime socket, so Beszel's Docker-statistics feature has nothing to read: `container_stats` stays empty, and the systems table shows aggregate figures. Container health alerts and image-update indicators also require that socket. Linux uptime now comes from `/proc/uptime`; its meaning depends on the runtime's time namespace.
 2. **Registration cannot be automated.** The universal token has to be copied out of Beszel's UI by hand, because Beszel issues one only to an authenticated normal user.
 3. **The hub will not start without a published non-local address** for its Web UI interface.
 4. **Host integrations require access to their data.** The bundled scratch agent has no systemd service manager or ZFS utilities. Use an agent installed on the monitored host for systemd failure alerts and full ZFS monitoring.
+5. **Storage pool visibility depends on the runtime.** Btrfs reporting uses visible mount and sysfs information; complete host pool visibility from the bundled agent requires native verification.
+6. **ICMP depends on socket permissions.** The scratch agent has no `ping` executable as a fallback. Native StartOS ICMP monitoring requires verification; the package adds no raw-socket privileges.
 
 ---
 

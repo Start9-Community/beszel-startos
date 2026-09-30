@@ -11,7 +11,7 @@
 
 Beszel exposes a **Web UI** interface: the dashboard where you add machines, watch their metrics, and set up alerts.
 
-This package includes Beszel `0.19.0` for both the hub and the bundled agent. This release adds ZFS monitoring and additional alerts on supported machines, with fixes for agent metrics and hub reliability.
+This package includes Beszel `0.20.0` for both the hub and the bundled agent. This release adds network monitors, Btrfs storage reporting, and saved view preferences, with connection and certificate fixes.
 
 You also get an optional **local agent** — a second process, alongside the dashboard, that monitors this StartOS server. It is off until you configure it; turning it on is the last section of [Getting set up](#getting-set-up).
 
@@ -53,8 +53,16 @@ Reopening the action never shows you the saved token. Leave that field blank to 
 
 If the system never appears, check this service's Logs tab — a wrong token or public key is reported there. Your token is never written to the logs.
 
+### Network monitoring
+
+Configure network monitors in the Beszel dashboard and select the agent that should run them. HTTP, TCP, and DNS targets must be reachable from that agent. ICMP availability depends on its operating system permissions and has not been verified for the bundled StartOS agent.
+
+HTTPS monitors require the target certificate to be trusted by the agent's system CA bundle. The remote-agent `CA_CERT_FILE` setting described above applies only to its connection to the Beszel hub.
+
 ## Limitations
 
-**The local agent can't break its figures down per service.** Its CPU, memory, swap, and disk readings report server totals, but Beszel's Docker-statistics panel stays empty because a StartOS service can't reach the container runtime. Container health alerts are unavailable for the same reason. Uptime depends on what the service's runtime exposes.
+**The local agent can't break its figures down per service.** Its CPU, memory, swap, and disk readings report server totals, but Beszel's Docker-statistics panel stays empty because a StartOS service can't reach the container runtime. Container health alerts and image-update indicators are unavailable for the same reason. Uptime depends on what the service's runtime exposes.
 
 Systemd failure alerts and full ZFS monitoring need an agent installed on the monitored host with access to the required services, devices, and utilities.
+
+Btrfs storage reporting depends on which mount and filesystem information the agent can access. Complete storage-pool visibility from the bundled agent has not been verified on StartOS.
