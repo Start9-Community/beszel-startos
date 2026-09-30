@@ -11,6 +11,8 @@
 
 Beszel exposes a **Web UI** interface: the dashboard where you add machines, watch their metrics, and set up alerts.
 
+This package includes Beszel `0.18.8` for both the hub and the bundled agent. This release adds battery and fan monitoring on supported machines and improves agent reconnections.
+
 You also get an optional **local agent** — a second process, alongside the dashboard, that monitors this StartOS server. It is off until you configure it; turning it on is the last section of [Getting set up](#getting-set-up).
 
 Machines you actually want to monitor — your laptop, a VPS, another server — run Beszel's own agent installed on them directly, exactly as the upstream guide describes. Nothing about that changes here.
@@ -33,7 +35,7 @@ The same action offers an optional **Heartbeat URL**: an endpoint Beszel calls o
 ### Enabling the local agent
 
 1. In Beszel, go to **Settings → Tokens**, enable the universal token, and set it to **Permanent**. Copy it.
-2. Copy the hub's SSH public key, which Beszel shows in its agent setup screen.
+2. Copy the hub's SSH public key from the same **Settings → Tokens** screen.
 3. Run **Configure Local Agent**. Turn it on, give it a system name, and paste in the public key and the token. Optionally name a temperature sensor — for example `coretemp_package_id_0` — to pick which reading shows in the systems table; leave it blank and Beszel chooses.
 4. Save. Beszel restarts, the agent connects, and the system appears in your systems table on its own.
 

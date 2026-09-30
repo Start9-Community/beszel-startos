@@ -35,7 +35,9 @@
 
 ## Image and Container Runtime
 
-Two upstream images, unmodified, each running its own entrypoint.
+Two upstream images, unmodified, each running its own entrypoint. Both use Beszel `0.18.8`, pinned to immutable multi-architecture image digests in `startos/manifest/index.ts`.
+
+The package does not build upstream source and requires no `upstream-project` checkout or Git submodule. Its license and icon are regular files included in this repository.
 
 | Property      | Value                                    |
 | ------------- | ---------------------------------------- |
@@ -48,7 +50,7 @@ Two upstream images, unmodified, each running its own entrypoint.
 | `beszel`       | The hub daemon — the one to `attach` to                  |
 | `beszel-agent` | The optional `local-agent` daemon; absent unless enabled |
 
-**Both images are `FROM scratch`** — a single static Go binary plus a CA bundle, with no shell, no `/etc/passwd`, and no `/etc/group`. Subcontainer exec resolves a user against those files, so `main.ts` writes a minimal pair into each subcontainer before the daemon spawns. This is also why the agent's health check execs `/agent health` directly rather than going through a shell: there is no shell to go through.
+**Both images are `FROM scratch`**, with a static Go binary, no shell, no `/etc/passwd`, and no `/etc/group`. The hub also includes a public CA bundle. Subcontainer exec resolves a user against the account files, so `main.ts` writes a minimal pair into each subcontainer before the daemon spawns. The agent's health check execs `/agent health` directly because the image has no shell.
 
 ## Volume and Data Layout
 
