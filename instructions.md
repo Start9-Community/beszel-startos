@@ -11,6 +11,8 @@
 
 Beszel exposes a **Web UI** interface: the dashboard where you add machines, watch their metrics, and set up alerts.
 
+This package includes Beszel `0.20.0` for both the hub and the bundled agent. This release adds network monitors, Btrfs storage reporting, and saved view preferences, with connection and certificate fixes.
+
 You also get an optional **local agent** — a second process, alongside the dashboard, that monitors this StartOS server. It is off until you configure it; turning it on is the last section of [Getting set up](#getting-set-up).
 
 Machines you actually want to monitor — your laptop, a VPS, another server — run Beszel's own agent installed on them directly, exactly as the upstream guide describes. Nothing about that changes here.
@@ -30,10 +32,16 @@ If those links point somewhere you don't want, run **Configure Hub** and choose 
 
 The same action offers an optional **Heartbeat URL**: an endpoint Beszel calls on a schedule so an external monitor can tell it's alive. Leave it blank unless you have one.
 
+### Connecting remote agents over HTTPS
+
+Agents from `0.19.0` onward verify the hub's HTTPS certificate. If your chosen Web UI address uses a StartOS certificate or another private certificate authority, copy that authority's PEM certificate to each remote agent and set `CA_CERT_FILE` to its path. For a container agent, mount the certificate into the container and use the container path. Restart the remote agent after changing its configuration.
+
+The bundled local agent connects internally over HTTP and needs no certificate configuration.
+
 ### Enabling the local agent
 
 1. In Beszel, go to **Settings → Tokens**, enable the universal token, and set it to **Permanent**. Copy it.
-2. Copy the hub's SSH public key, which Beszel shows in its agent setup screen.
+2. Copy the hub's SSH public key from the same **Settings → Tokens** screen.
 3. Run **Configure Local Agent**. Turn it on, give it a system name, and paste in the public key and the token. Optionally name a temperature sensor — for example `coretemp_package_id_0` — to pick which reading shows in the systems table; leave it blank and Beszel chooses.
 4. Save. Beszel restarts, the agent connects, and the system appears in your systems table on its own.
 
@@ -45,6 +53,16 @@ Reopening the action never shows you the saved token. Leave that field blank to 
 
 If the system never appears, check this service's Logs tab — a wrong token or public key is reported there. Your token is never written to the logs.
 
+### Network monitoring
+
+Configure network monitors in the Beszel dashboard and select the agent that should run them. HTTP, TCP, and DNS targets must be reachable from that agent. ICMP availability depends on its operating system permissions and has not been verified for the bundled StartOS agent.
+
+HTTPS monitors require the target certificate to be trusted by the agent's system CA bundle. The remote-agent `CA_CERT_FILE` setting described above applies only to its connection to the Beszel hub.
+
 ## Limitations
 
-**The local agent can't break its figures down per service.** Its CPU, memory, swap, disk, and uptime readings are your server's real totals, but Beszel's Docker-statistics panel stays empty — a StartOS service can't reach the container runtime, so there's nothing to build a per-service breakdown from. You get one number per resource for the whole machine, not a row per service.
+**The local agent can't break its figures down per service.** Its CPU, memory, swap, and disk readings report server totals, but Beszel's Docker-statistics panel stays empty because a StartOS service can't reach the container runtime. Container health alerts and image-update indicators are unavailable for the same reason. Uptime depends on what the service's runtime exposes.
+
+Systemd failure alerts and full ZFS monitoring need an agent installed on the monitored host with access to the required services, devices, and utilities.
+
+Btrfs storage reporting depends on which mount and filesystem information the agent can access. Complete storage-pool visibility from the bundled agent has not been verified on StartOS.
