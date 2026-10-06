@@ -35,7 +35,7 @@
 
 ## Image and Container Runtime
 
-Two upstream images, unmodified, each running its own entrypoint. Both use Beszel `0.20.0`, pinned to immutable multi-architecture image digests in `startos/manifest/index.ts`. The StartOS package version is `0.20.0:0`.
+Two upstream images, unmodified, each running its own entrypoint. Both use Beszel `0.20.0`, pinned to immutable multi-architecture image digests in `startos/manifest/index.ts`. The StartOS package version is `0.20.0:1`.
 
 The package does not build upstream source and requires no `upstream-project` checkout or Git submodule. Its license and icon are regular files included in this repository.
 
@@ -67,14 +67,14 @@ The mount points are fixed by the images: `/beszel_data` is the hub's declared `
 
 Four models, all StartOS-side state. Beszel's own configuration is held in its PocketBase database, which this package neither reads nor writes; everything the package controls reaches the hub as an environment variable at launch.
 
-| Model                | File                                       | Seeded by                 | Rewritten by              |
-| -------------------- | ------------------------------------------ | ------------------------- | ------------------------- |
-| `hubConfigJson`      | `/beszel_data/startos-wrapper-config.json` | `merge({})` at init       | **Configure Hub**         |
-| `agentConfigJson`    | `/var/lib/beszel-agent/config.json`        | `merge({})` at init       | **Configure Local Agent** |
-| `hubPublicKeyFile`   | `/var/lib/beszel-agent/hub.pub`            | **Configure Local Agent** | **Configure Local Agent** |
-| `universalTokenFile` | `/var/lib/beszel-agent/universal-token`    | **Configure Local Agent** | **Configure Local Agent** |
+| Model                | File                                       | Seeded by                 | Rewritten by                                 |
+| -------------------- | ------------------------------------------ | ------------------------- | -------------------------------------------- |
+| `hubConfigJson`      | `/beszel_data/startos-wrapper-config.json` | `merge({})` at init       | **Set Primary URL**, **Configure Heartbeat** |
+| `agentConfigJson`    | `/var/lib/beszel-agent/config.json`        | `merge({})` at init       | **Configure Local Agent**                    |
+| `hubPublicKeyFile`   | `/var/lib/beszel-agent/hub.pub`            | **Configure Local Agent** | **Configure Local Agent**                    |
+| `universalTokenFile` | `/var/lib/beszel-agent/universal-token`    | **Configure Local Agent** | **Configure Local Agent**                    |
 
-Nothing is re-asserted behind the user's back — the two actions are the only writers, and each `merge({})` at init only fills a key that is missing. A hand edit survives and takes effect, because `main.ts` reads all four reactively: a change restarts the affected daemon.
+Nothing is re-asserted behind the user's back — the three actions are the only writers, and each `merge({})` at init only fills a key that is missing. A hand edit survives and takes effect, because `main.ts` reads all four reactively: a change restarts the affected daemon.
 
 `universal-token` is written mode 0600 and is the one secret the package holds. It is passed to the agent as a _file path_, never as an argument or an environment value, is redacted out of the agent's forwarded stdout/stderr, and is never returned when the action's form is reopened — leaving that field blank keeps the stored value.
 
@@ -90,6 +90,8 @@ One interface, serving the dashboard and Beszel's own API on the same port.
 | --------- | -------- | ---- | ---- | ------------------------------------------------------------------- |
 | Web UI    | `web-ui` | ui   | 8090 | Dashboard for viewing system metrics and managing monitored systems |
 
+**Open UI** opens the address that `bestUsable` resolves for the Primary URL (`preferredLauncherAddress`), the same one Beszel advertises.
+
 The agent listens on 45876 but is **not** exported, because the only client is the hub in the same service, reached over loopback at `http://127.0.0.1:8090`. That is deliberate: local registration then does not depend on the published hub URL, on TLS trust, or on the StartOS reverse proxy.
 
 Starting with agent `0.19.0`, remote agents verify the hub's HTTPS certificate. If the published address uses a StartOS or other private CA, provide its PEM certificate to each remote agent through `CA_CERT_FILE`, using a path readable inside that agent's runtime. The bundled agent uses local HTTP and needs no additional CA configuration.
@@ -100,21 +102,23 @@ Beszel `0.20.0` adds agent-based HTTP, TCP, DNS, and ICMP network monitors, conf
 
 Two things must happen in order, and the second cannot be automated.
 
-**The hub needs a non-local address before it will start.** Beszel bakes `APP_URL` into the links it generates and the install commands it shows for remote agents, so the package resolves it from the Web UI interface's published addresses — preferring a public one, then any non-local one. A server with no LAN, Tor, or domain address published for that interface has nothing to resolve, and `main.ts` throws rather than starting the hub on a URL that would send users nowhere. **Configure Hub** pins a specific choice if the automatic one is wrong.
+**The hub needs a non-local address before it will start.** Beszel bakes `APP_URL` into the links it generates and the install commands it shows for remote agents. The package passes `sdk.setupPrimaryUrl`'s `bestUsable` (`startos/primaryUrl.ts`): the address stored by **Set Primary URL**, followed to its hostname's current port and scheme; while nothing is stored or that hostname is gone, the preferred address — a public domain, HTTPS first, then the `.local` address, then the first one offered. The stored choice is never overwritten by the fallback, so a chosen address that comes back is used again. A server with no LAN, Tor, or domain address published for the Web UI interface has nothing to resolve, and `main.ts` throws rather than starting the hub on a URL that would send users nowhere.
 
 **The local agent has to be configured by hand, after an account exists.** Beszel issues a universal token only to a signed-in normal user (0.18.7 rejects universal-token API use by a PocketBase superuser), and offers no unauthenticated bootstrap. So the package cannot register itself at install time: the user creates an account in Beszel's own UI, copies a token and the hub's public key out of it, and pastes them into **Configure Local Agent**. This is why that task is `important` rather than `critical` — a `critical` task would block the hub from starting, and the hub has to be running to produce the token that clears it.
 
 ## Actions
 
-Two, both user-facing.
+Three, all user-facing.
 
-### Configure Hub
+### Set Primary URL
 
-Run it when the address Beszel advertises is wrong — generated links point somewhere unreachable, or a remote agent's install command names the wrong host. It writes `startos-wrapper-config.json` and restarts the hub, a few seconds' interruption. Idempotent.
+Id `set-hub-config`. Run it when the address Beszel advertises is wrong — generated links point somewhere unreachable, or a remote agent's install command names the wrong host. It stores the choice as `primaryUrl` in `startos-wrapper-config.json` and restarts the hub, a few seconds' interruption. Idempotent.
 
-The Primary URL field offers only addresses StartOS currently publishes for the Web UI interface, and the save is rejected if the chosen one is no longer among them. An empty dropdown therefore means no address is published for that interface — not a package fault.
+The Primary URL field offers the Web UI interface's non-local addresses (loopback, link-local and the container bridge are left out) and preselects the preferred one. An empty dropdown means no address is published for that interface — not a package fault.
 
-The optional heartbeat calls an external endpoint on an interval; it is off unless a URL is given, and the URL is stored verbatim rather than reduced to an origin, since these endpoints carry a path.
+### Configure Heartbeat
+
+Id `set-heartbeat`. The optional heartbeat calls an external endpoint on an interval; it is off unless a URL is given, and the URL is stored verbatim rather than reduced to an origin, since these endpoints carry a path. Saving restarts the hub.
 
 ### Configure Local Agent
 
@@ -130,12 +134,12 @@ Validation happens at save time: with the agent enabled, a missing key, token, o
 
 Two, both `important`, so neither blocks the service from starting.
 
-| Task                          | Raised when                                                                               | Cleared by                                             |
-| ----------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| Choose the primary Beszel URL | The stored Primary URL is unset, or is not among the currently published Web UI addresses | **Configure Hub** saving a currently-published address |
-| Configure the local agent     | Install only                                                                              | **Configure Local Agent** saving                       |
+| Task                          | Raised when                                                                                    | Cleared by                                                               |
+| ----------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Choose the primary Beszel URL | The stored Primary URL is unset, or its hostname is not among the Web UI interface's addresses | **Set Primary URL** saving one of them, or the stored hostname returning |
+| Configure the local agent     | Install only                                                                                   | **Configure Local Agent** saving                                         |
 
-The hub-URL task can return: removing or replacing the address it names raises it again on the next init pass. The local-agent task is raised on install and not again — a later `init` does not re-raise it, so a user who dismisses it and then wants the agent runs the action from the Actions list directly.
+The hub-URL task can return: removing the address it names raises it again, and it is not raised while the interface has no addresses at all (the hub then refuses to start instead). The local-agent task is raised on install and not again — a later `init` does not re-raise it, so a user who dismisses it and then wants the agent runs the action from the Actions list directly.
 
 ## Health Checks
 
@@ -206,7 +210,8 @@ dependencies: none
 interfaces:
   web-ui: { type: ui, port: 8090 }
 actions:
-  - set-hub-config
+  - set-hub-config # Set Primary URL
+  - set-heartbeat # Configure Heartbeat
   - configure-local-agent
 tasks:
   - { action: set-hub-config, severity: important }

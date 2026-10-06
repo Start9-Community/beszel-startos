@@ -1,7 +1,9 @@
+import { primaryUrl } from '../primaryUrl'
 import { sdk } from '../sdk'
 import { configureLocalAgent } from './configureLocalAgent'
-import { setHubConfig } from './setHubConfig'
+import { setHeartbeat } from './setHeartbeat'
 
 export const actions = sdk.Actions.of()
-  .addAction(setHubConfig)
+  .addAction(primaryUrl.action)
+  .addAction(setHeartbeat)
   .addAction(configureLocalAgent)

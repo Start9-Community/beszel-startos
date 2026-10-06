@@ -1,4 +1,3 @@
-import { type T } from '@start9labs/start-sdk'
 import {
   type HubConfig,
   hubConfigDefaults,
@@ -6,11 +5,6 @@ import {
 } from '../fileModels/hubConfig'
 import { i18n } from '../i18n'
 import { sdk } from '../sdk'
-import {
-  discoverCanonicalHubUrl,
-  getWebUiInterfaceUrls,
-  normalizeOrigin,
-} from '../utils'
 
 const { InputSpec, Value } = sdk
 
@@ -35,32 +29,6 @@ function validateHeartbeatUrl(value: string | null | undefined): string {
 }
 
 const inputSpec = InputSpec.of({
-  primaryUrl: Value.dynamicSelect(async ({ effects }) => {
-    const [urls, canonicalUrl] = await Promise.all([
-      getWebUiInterfaceUrls(effects),
-      discoverCanonicalHubUrl(effects),
-    ])
-
-    return {
-      name: i18n('Primary URL'),
-      description: i18n(
-        'URL Beszel uses for externally generated links and external agent configuration.',
-      ),
-      values: urls.reduce(
-        (values, url) => ({
-          ...values,
-          [url]: url,
-        }),
-        {} as Record<string, string>,
-      ),
-      default: canonicalUrl,
-      disabled:
-        urls.length === 0
-          ? i18n('No Beszel Web UI URLs are currently available in StartOS.')
-          : false,
-    }
-  }),
-
   heartbeatUrl: Value.text({
     name: i18n('Heartbeat URL'),
     description: i18n(
@@ -83,7 +51,9 @@ const inputSpec = InputSpec.of({
 
   heartbeatMethod: Value.select({
     name: i18n('Heartbeat Method'),
-    description: i18n('HTTP method used for heartbeat requests.'),
+    description: i18n(
+      '- POST: Each heartbeat carries a JSON summary of system status, down systems and triggered alerts\n- GET: Each heartbeat is a plain request with no body\n- HEAD: Like GET, but the endpoint returns headers only',
+    ),
     default: hubConfigDefaults.heartbeatMethod,
     values: {
       POST: 'POST',
@@ -93,12 +63,12 @@ const inputSpec = InputSpec.of({
   }),
 })
 
-export const setHubConfig = sdk.Action.withInput(
-  'set-hub-config',
+export const setHeartbeat = sdk.Action.withInput(
+  'set-heartbeat',
   {
-    name: i18n('Configure Hub'),
+    name: i18n('Configure Heartbeat'),
     description: i18n(
-      'Configure the canonical Beszel URL and optional heartbeat monitoring.',
+      'Have Beszel call an external endpoint on an interval, so an outside monitor can tell the hub is running.',
     ),
     warning: null,
     allowedStatuses: 'any',
@@ -107,18 +77,10 @@ export const setHubConfig = sdk.Action.withInput(
   },
   inputSpec,
 
-  async ({ effects }) => {
+  async () => {
     const config = await readHubConfig()
-    const availableUrls = await getWebUiInterfaceUrls(effects)
-    const storedPrimaryUrl = normalizeOrigin(config.primaryUrl)
-
-    const primaryUrl =
-      storedPrimaryUrl && availableUrls.includes(storedPrimaryUrl)
-        ? storedPrimaryUrl
-        : await discoverCanonicalHubUrl(effects)
 
     return {
-      primaryUrl,
       heartbeatUrl: config.heartbeatUrl.trim() || null,
       heartbeatInterval: config.heartbeatInterval,
       heartbeatMethod: config.heartbeatMethod,
@@ -126,36 +88,17 @@ export const setHubConfig = sdk.Action.withInput(
   },
 
   async ({ effects, input }) => {
-    const primaryUrl = normalizeOrigin(input.primaryUrl)
-
-    if (!primaryUrl) {
-      throw new Error(i18n('Primary URL must be a valid HTTP or HTTPS URL.'))
-    }
-
-    const availableUrls = await getWebUiInterfaceUrls(effects)
-
-    if (!availableUrls.includes(primaryUrl)) {
-      throw new Error(
-        i18n(
-          'Primary URL must be one of the Web UI addresses currently published by StartOS.',
-        ),
-      )
-    }
-
-    const heartbeatUrl = validateHeartbeatUrl(input.heartbeatUrl)
-
     await hubConfigJson.merge(effects, {
-      primaryUrl,
-      heartbeatUrl,
+      heartbeatUrl: validateHeartbeatUrl(input.heartbeatUrl),
       heartbeatInterval: input.heartbeatInterval,
       heartbeatMethod: input.heartbeatMethod,
     })
 
     return {
       version: '1',
-      title: i18n('Hub Configuration Saved'),
+      title: i18n('Heartbeat Saved'),
       message: i18n(
-        'The Beszel Hub configuration has been saved. If Beszel is running, it will restart automatically to apply the changes.',
+        'The heartbeat settings have been saved. If Beszel is running, it restarts automatically to apply them.',
       ),
       result: null,
     }

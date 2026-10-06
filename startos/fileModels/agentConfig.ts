@@ -3,7 +3,7 @@ import { sdk } from '../sdk'
 
 const agentVolume = sdk.volumes.agent
 
-const shape = z.object({
+const shape = z.looseObject({
   enabled: z.boolean().catch(false),
   systemName: z.string().catch('StartOS'),
   primarySensor: z.string().catch(''),

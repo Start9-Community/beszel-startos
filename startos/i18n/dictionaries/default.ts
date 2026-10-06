@@ -3,7 +3,7 @@ export const DEFAULT_LANG = 'en_US'
 const dict = {
   // main.ts
   'Starting Beszel!': 0,
-  'No non-local Beszel Web UI address is available. Publish a LAN, Tor, or domain address for the Web UI interface, then run Configure Hub.': 1,
+  'No non-local Beszel Web UI address is available. Publish a LAN, Tor, or domain address for the Web UI interface.': 1,
   'Web Interface': 2,
   'Beszel is ready': 3,
   'Beszel is still starting. If this persists, check the service logs.': 4,
@@ -16,28 +16,28 @@ const dict = {
   'Web-based dashboard for viewing system metrics and managing monitored systems': 9,
 
   // init/hubConfig.ts
-  'Choose the primary Beszel URL used for externally generated links and external agent configuration. Heartbeat monitoring is optional.': 10,
+  'Choose the URL Beszel puts in the links it generates and in the install commands it shows for remote agents.': 10,
 
   // init/localAgent.ts
   'After creating your Beszel account, configure the local agent to register this package automatically.': 11,
 
-  // actions/setHubConfig.ts
-  'Configure Hub': 12,
-  'Configure the canonical Beszel URL and optional heartbeat monitoring.': 13,
+  // primaryUrl.ts
+  'Set Primary URL': 46,
+  'Choose the URL Beszel puts in the links it generates and in the install commands it shows for remote agents. Beszel restarts to apply the change.': 15,
   'Primary URL': 14,
-  'URL Beszel uses for externally generated links and external agent configuration.': 15,
-  'No Beszel Web UI URLs are currently available in StartOS.': 16,
+
+  // actions/setHeartbeat.ts
+  'Configure Heartbeat': 12,
+  'Have Beszel call an external endpoint on an interval, so an outside monitor can tell the hub is running.': 13,
   'Heartbeat URL': 17,
   'Optional HTTP(S) endpoint Beszel calls as a heartbeat. Leave blank to disable heartbeat.': 18,
   'Heartbeat Interval': 19,
   'Interval in seconds between heartbeat requests.': 20,
   'Heartbeat Method': 21,
-  'HTTP method used for heartbeat requests.': 22,
+  '- POST: Each heartbeat carries a JSON summary of system status, down systems and triggered alerts\n- GET: Each heartbeat is a plain request with no body\n- HEAD: Like GET, but the endpoint returns headers only': 22,
   'Heartbeat URL must be a valid HTTP or HTTPS URL.': 23,
-  'Primary URL must be a valid HTTP or HTTPS URL.': 24,
-  'Primary URL must be one of the Web UI addresses currently published by StartOS.': 25,
-  'Hub Configuration Saved': 26,
-  'The Beszel Hub configuration has been saved. If Beszel is running, it will restart automatically to apply the changes.': 27,
+  'Heartbeat Saved': 26,
+  'The heartbeat settings have been saved. If Beszel is running, it restarts automatically to apply them.': 27,
 
   // actions/configureLocalAgent.ts
   'Configure Local Agent': 28,

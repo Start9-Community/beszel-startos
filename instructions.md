@@ -26,11 +26,11 @@ That is the whole setup for monitoring other machines. The rest is only needed i
 
 ### Setting the address Beszel advertises
 
-Beszel puts an address into the links it generates and the agent install commands it shows you. StartOS picks one for you from the addresses you've published for the Web UI interface, preferring a public one.
+Beszel puts an address into the links it generates and the agent install commands it shows you. After install, StartOS asks you to run **Set Primary URL** and choose it. The form preselects a public domain if you have one, HTTPS first, and otherwise this server's `.local` address. Until you choose, and whenever the address you chose is unavailable, Beszel uses that preselected address. Opening the Web UI from StartOS goes to the address you chose.
 
-If those links point somewhere you don't want, run **Configure Hub** and choose a different address. The dropdown lists exactly what's currently published — if it's empty, publish an address for the Web UI interface first.
+If those links point somewhere you don't want, run **Set Primary URL** again and choose a different address. The dropdown lists exactly what's currently published — if it's empty, publish an address for the Web UI interface first.
 
-The same action offers an optional **Heartbeat URL**: an endpoint Beszel calls on a schedule so an external monitor can tell it's alive. Leave it blank unless you have one.
+**Configure Heartbeat** sets an optional **Heartbeat URL**: an endpoint Beszel calls on a schedule so an external monitor can tell it's alive. Leave it blank unless you have one.
 
 ### Connecting remote agents over HTTPS
 
