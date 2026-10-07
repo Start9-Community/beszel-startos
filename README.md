@@ -139,7 +139,7 @@ Two, both `important`, so neither blocks the service from starting.
 | Choose the primary Beszel URL | The stored Primary URL is unset, or its hostname is not among the Web UI interface's addresses | **Set Primary URL** saving one of them, or the stored hostname returning |
 | Configure the local agent     | Install only                                                                                   | **Configure Local Agent** saving                                         |
 
-The hub-URL task can return: removing the address it names raises it again, and it is not raised while the interface has no addresses at all (the hub then refuses to start instead). The local-agent task is raised on install and not again — a later `init` does not re-raise it, so a user who dismisses it and then wants the agent runs the action from the Actions list directly.
+The hub-URL task can return: removing the address it names raises it again, and it is raised even while the interface has no addresses, so publish a Web UI address before completing it. The local-agent task is raised on install and not again — a later `init` does not re-raise it, so a user who dismisses it and then wants the agent runs the action from the Actions list directly.
 
 ## Health Checks
 
