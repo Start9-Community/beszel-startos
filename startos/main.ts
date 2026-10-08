@@ -6,10 +6,10 @@ import {
 } from './fileModels/agentConfig'
 import { hubConfigDefaults, hubConfigJson } from './fileModels/hubConfig'
 import { i18n } from './i18n'
+import { primaryUrl } from './primaryUrl'
 import {
   agentMountVolume,
   agentPort,
-  discoverCanonicalHubUrl,
   httpPort,
   localHubUrl,
   mountVolume,
@@ -47,13 +47,12 @@ export const main = sdk.setupMain(async ({ effects }) => {
   const hubConfig =
     (await hubConfigJson.read().const(effects)) ?? hubConfigDefaults
 
-  const primaryUrl =
-    hubConfig.primaryUrl.trim() || (await discoverCanonicalHubUrl(effects))
+  const appUrl = await primaryUrl.bestUsable(effects).const()
 
-  if (!primaryUrl) {
+  if (!appUrl) {
     throw new Error(
       i18n(
-        'No non-local Beszel Web UI address is available. Publish a LAN, Tor, or domain address for the Web UI interface, then run Configure Hub.',
+        'No non-local Beszel Web UI address is available. Publish a LAN, Tor, or domain address for the Web UI interface.',
       ),
     )
   }
@@ -73,7 +72,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
     exec: {
       command: sdk.useEntrypoint(),
       env: {
-        APP_URL: primaryUrl,
+        APP_URL: appUrl,
         ...(heartbeatUrl
           ? {
               HEARTBEAT_URL: heartbeatUrl,
@@ -134,11 +133,10 @@ export const main = sdk.setupMain(async ({ effects }) => {
       display: i18n('Local Agent'),
       gracePeriod: 30_000,
       fn: async () => {
-        const check = await agentSubcontainer.exec(
-          ['/agent', 'health'],
-          { env: { LISTEN: String(agentPort) } },
-          5_000,
-        )
+        const check = await agentSubcontainer.exec(['/agent', 'health'], {
+          env: { LISTEN: String(agentPort) },
+          timeout: 5_000,
+        })
         return check.exitCode === 0
           ? {
               result: 'success' as const,

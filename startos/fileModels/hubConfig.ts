@@ -12,7 +12,7 @@ export const hubConfigDefaults = {
   heartbeatMethod: 'POST' as const,
 }
 
-const shape = z.object({
+const shape = z.looseObject({
   primaryUrl: z.string().catch(hubConfigDefaults.primaryUrl),
   heartbeatUrl: z.string().catch(hubConfigDefaults.heartbeatUrl),
   heartbeatInterval: z

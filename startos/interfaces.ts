@@ -1,4 +1,5 @@
 import { i18n } from './i18n'
+import { primaryUrl } from './primaryUrl'
 import { sdk } from './sdk'
 import { httpPort, webInterfaceId, webMultiHostId } from './utils'
 
@@ -18,6 +19,7 @@ export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
     username: null,
     path: '',
     query: {},
+    preferredLauncherAddress: await primaryUrl.bestUsable(effects).const(),
   })
 
   return [await multiOrigin.export([webInterface])]

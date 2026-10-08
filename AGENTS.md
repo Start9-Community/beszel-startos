@@ -18,14 +18,21 @@ Freshly scaffolded? Work the
 guide page, not a file in this repo — read it, don't copy it in.
 
 Keep `README.md` (technical reference for an AI support or administering agent) and
-`instructions.md` (end-user docs) in sync with your changes.
+`instructions.md` (end-user docs) in sync with your changes. This file restates neither:
+whoever changes the package has both, so it carries only what they don't — repo mechanics,
+a change that looks right and is not, where the next thing gets added, a naming trap, a
+build or test invocation particular to this repo.
 
-**Bugs and feature requests are GitHub issues on this repo** — file them as you find them.
+**Fix a defect you spot rather than reporting it** — you have the package open and the
+context to be sure. File **a GitHub issue on this repo** only when the call isn't yours to
+make: you can't pin the cause down, two defensible fixes exist, or it's too large to ride on
+the work in hand. An open issue is a report, not a queue — implement one when you're asked
+to or when it's labelled `Approved`, then close it with `Closes #<n>`.
+
 Don't record work in the repo instead: no `TODO.md`, no `NOTES.md`, no `PLAN.md`. What you
 verified, tried, and decided belongs in the commit message and the PR body.
 
 ## This repo
 
-- **Both upstream images are `FROM scratch`** — a single static Go binary plus a CA bundle, and nothing else. No shell, no `/etc/passwd`, no `/etc/group`. `main.ts` writes minimal account files into each subcontainer before the daemon spawns, because subcontainer exec has to resolve a user; without them the daemon never starts. Anything you add that shells out (`sh -c …`, a health check that pipes) will fail here — exec the binary directly, as the agent health check does.
+- **Exec binaries directly; never shell out** (`sh -c …`, a health check that pipes): both upstream images are `FROM scratch` and have no shell.
 - **The default branch is `main`, and the CI workflows say `main`.** Keep those in step: a workflow pointed at a branch the repo doesn't use silently never runs.
-- **The hub's `APP_URL` must be a non-local address**, and Beszel bakes it into the links it generates and the install commands it shows for remote agents. It is resolved from the exported Web UI interface, so a server with no LAN/Tor/domain address published for that interface cannot start the hub.
