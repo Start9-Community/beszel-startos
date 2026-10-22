@@ -35,15 +35,15 @@
 
 ## Image and Container Runtime
 
-Two upstream images, unmodified, each running its own entrypoint. Both use Beszel `0.20.0`, pinned to immutable multi-architecture image digests in `startos/manifest/index.ts`. The StartOS package version is `0.20.0:1`.
+Two upstream images, each running its own entrypoint. Both use Beszel `0.20.0`, pinned to immutable multi-architecture image digests in `startos/manifest/index.ts`. The root `Dockerfile` replaces each image's CA bundle with a current one, a temporary layer that comes out once upstream ships images built on a fixed store. The StartOS package version is `0.20.0:2`.
 
 The package does not build upstream source and requires no `upstream-project` checkout or Git submodule. Its license and icon are regular files included in this repository.
 
-| Property      | Value                                    |
-| ------------- | ---------------------------------------- |
-| Images        | `henrygd/beszel`, `henrygd/beszel-agent` |
-| Architectures | x86_64, aarch64                          |
-| Command       | `sdk.useEntrypoint()` for both           |
+| Property      | Value                                                              |
+| ------------- | ------------------------------------------------------------------ |
+| Images        | `henrygd/beszel`, `henrygd/beszel-agent`, each + root `Dockerfile` |
+| Architectures | x86_64, aarch64                                                    |
+| Command       | `sdk.useEntrypoint()` for both                                     |
 
 | Subcontainer   | Purpose                                                  |
 | -------------- | -------------------------------------------------------- |
