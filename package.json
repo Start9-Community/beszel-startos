@@ -6,7 +6,7 @@
     "pack": "make"
   },
   "dependencies": {
-    "@start9labs/start-sdk": "3.0.3"
+    "@start9labs/start-sdk": "3.1.0"
   },
   "overrides": {
     "@start9labs/start-sdk": "$@start9labs/start-sdk"
