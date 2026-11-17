@@ -11,7 +11,7 @@
 
 Beszel exposes a **Web UI** interface: the dashboard where you add machines, watch their metrics, and set up alerts.
 
-This package includes Beszel `0.20.0` for both the hub and the bundled agent. This release adds network monitors, Btrfs storage reporting, and saved view preferences, with connection and certificate fixes.
+This package includes Beszel `0.21.2` for both the hub and the bundled agent.
 
 You also get an optional **local agent** — a second process, alongside the dashboard, that monitors this StartOS server. It is off until you configure it; turning it on is the last section of [Getting set up](#getting-set-up).
 
@@ -23,6 +23,8 @@ Machines you actually want to monitor — your laptop, a VPS, another server —
 2. Add the machines you want to monitor, following Beszel's own instructions. For each, Beszel gives you an install command to run on that machine.
 
 That is the whole setup for monitoring other machines. The rest is only needed if you want Beszel to also report on this service.
+
+**Sign-in rate limit:** Clients using the same StartOS proxy share a limit of 10 sign-in attempts per minute. If Beszel reports too many requests, pause sign-in attempts for a minute before trying again. Repeated attempts by one person can affect others; existing authenticated sessions and agent connections keep working.
 
 ### Setting the address Beszel advertises
 
