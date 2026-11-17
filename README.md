@@ -12,7 +12,7 @@
 [Beszel](https://github.com/henrygd/beszel) is a lightweight server monitoring hub: a web dashboard that collects metrics from agents running on the machines you want to watch. This package runs the hub, and optionally an agent alongside it that monitors the StartOS server itself.
 
 - **Upstream repo:** <https://github.com/henrygd/beszel>
-- **Wrapper repo:** <https://github.com/Start9-Community/beszel-startos>
+- **Wrapper repo:** <https://github.com/Start9Labs/beszel-startos>
 
 ---
 
@@ -35,7 +35,7 @@
 
 ## Image and Container Runtime
 
-Two upstream images, each running its own entrypoint. Both use Beszel `0.20.0`, pinned to immutable multi-architecture image digests in `startos/manifest/index.ts`. The root `Dockerfile` replaces each image's CA bundle with a current one, a temporary layer that comes out once upstream ships images built on a fixed store. The StartOS package version is `0.20.0:2`.
+Two upstream images, each running its own entrypoint. Both use Beszel `0.21.2`, pinned to immutable multi-architecture image digests in `startos/manifest/index.ts`. The root `Dockerfile` replaces each image's CA bundle with a current one, a temporary layer that comes out once upstream ships images built on a fixed store. The StartOS package version is `0.21.2:0`.
 
 The package does not build upstream source and requires no `upstream-project` checkout or Git submodule. Its license and icon are regular files included in this repository.
 
@@ -96,7 +96,7 @@ The agent listens on 45876 but is **not** exported, because the only client is t
 
 Starting with agent `0.19.0`, remote agents verify the hub's HTTPS certificate. If the published address uses a StartOS or other private CA, provide its PEM certificate to each remote agent through `CA_CERT_FILE`, using a path readable inside that agent's runtime. The bundled agent uses local HTTP and needs no additional CA configuration.
 
-Beszel `0.20.0` adds agent-based HTTP, TCP, DNS, and ICMP network monitors, configured in the dashboard. Probes originate from the selected agent, so their targets must be reachable from that agent. HTTPS probes use the image's system CA bundle; `CA_CERT_FILE` configures the agent's hub connection, not network-monitor trust. The wrapper does not enable upstream trusted-header authentication, so `TRUSTED_PROXY_IPS` needs no package setting.
+Beszel's agent-based HTTP, TCP, DNS, and ICMP network monitors are configured in the dashboard. Probes originate from the selected agent, so their targets must be reachable from that agent. HTTPS probes use the image's system CA bundle; `CA_CERT_FILE` configures the agent's hub connection, not network-monitor trust. The wrapper does not enable upstream trusted-header authentication, so `TRUSTED_PROXY_IPS` needs no package setting.
 
 ## Installation and First-Run Flow
 
@@ -152,7 +152,7 @@ Two, the second present only when the local agent is enabled.
 
 A hub check that stays red past the first few seconds means the process is failing, not warming up — the service log carries the reason, and the usual one is an `APP_URL` the hub rejected.
 
-The agent check answers "is the listener running", **not** "is it registered with the hub" — an end-to-end registration check would require the package to hold a Beszel user session, which it deliberately does not. The two failure modes therefore look different:
+The agent check answers "has the agent's main loop refreshed its health file in the last 90 seconds" — a running, unfrozen agent — **not** "is it registered with the hub" — an end-to-end registration check would require the package to hold a Beszel user session, which it deliberately does not. The two failure modes therefore look different:
 
 - **A malformed public key** makes the agent exit at startup, so the row shows the supervisor's own `local-agent daemon crashed` rather than this package's message, and the agent's parse error repeats in the service log on each retry.
 - **A bad or revoked token** lets the agent run, so the row goes **green** while no system ever appears in Beszel's systems table. That combination is the tell.

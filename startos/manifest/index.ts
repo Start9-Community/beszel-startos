@@ -17,7 +17,7 @@ export const manifest = setupManifest({
         dockerBuild: {
           buildArgs: {
             IMAGE:
-              'henrygd/beszel:0.20.0@sha256:897e807a065adf8e89e30ae0cd79d1f5e38fe84ccaffbc418bde9d3cdca4eacc',
+              'henrygd/beszel:0.21.2@sha256:b0be90bd4aee2993fde763032a5098ce4386fba43cfe5031ec017b8d9e8c97a2',
           },
         },
       },
@@ -28,7 +28,7 @@ export const manifest = setupManifest({
         dockerBuild: {
           buildArgs: {
             IMAGE:
-              'henrygd/beszel-agent:0.20.0@sha256:765e3d4a087c4bcbf6b78ed0f1dfdcd669c4bf6ad5789a832d2944603ae7fd08',
+              'henrygd/beszel-agent:0.21.2@sha256:343254226ae57a5cc6f8c23c755b1464730aba2abc7043116a2e222711ec6e1a',
           },
         },
       },
