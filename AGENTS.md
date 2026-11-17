@@ -35,4 +35,3 @@ verified, tried, and decided belongs in the commit message and the PR body.
 ## This repo
 
 - **Exec binaries directly; never shell out** (`sh -c …`, a health check that pipes): both upstream images are `FROM scratch` and have no shell.
-- **The default branch is `main`, and the CI workflows say `main`.** Keep those in step: a workflow pointed at a branch the repo doesn't use silently never runs.

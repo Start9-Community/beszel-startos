@@ -5,7 +5,7 @@ export const manifest = setupManifest({
   id: 'beszel',
   title: 'Beszel',
   license: 'MIT',
-  packageRepo: 'https://github.com/Start9-Community/beszel-startos',
+  packageRepo: 'https://github.com/Start9Labs/beszel-startos',
   upstreamRepo: 'https://github.com/henrygd/beszel',
   marketingUrl: 'https://beszel.dev',
   donationUrl: null,

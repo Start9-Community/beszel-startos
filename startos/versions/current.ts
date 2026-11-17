@@ -1,17 +1,14 @@
 import { IMPOSSIBLE, VersionInfo } from '@start9labs/start-sdk'
 
 export const current = VersionInfo.of({
-  version: '0.20.0:2',
+  version: '0.20.0:3',
   releaseNotes: {
-    en_US:
-      'Stops trusting certificates from a compromised certificate authority (eMudhra).',
-    es_ES:
-      'Deja de confiar en los certificados de una autoridad de certificación comprometida (eMudhra).',
+    en_US: 'Now maintained by Start9 and published in the Start9 Registry.',
+    es_ES: 'Ahora lo mantiene Start9 y se publica en el Start9 Registry.',
     de_DE:
-      'Vertraut Zertifikaten einer kompromittierten Zertifizierungsstelle (eMudhra) nicht mehr.',
-    pl_PL:
-      'Przestaje ufać certyfikatom przejętego urzędu certyfikacji (eMudhra).',
-    fr_FR: `Ne fait plus confiance aux certificats d'une autorité de certification compromise (eMudhra).`,
+      'Wird jetzt von Start9 gepflegt und in der Start9 Registry veröffentlicht.',
+    pl_PL: 'Teraz utrzymywany przez Start9 i publikowany w Start9 Registry.',
+    fr_FR: 'Désormais maintenu par Start9 et publié dans le Start9 Registry.',
   },
   migrations: {
     up: async ({ effects }) => {},
