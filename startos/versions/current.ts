@@ -14,7 +14,7 @@ export const current = VersionInfo.of({
 
 **Security**
 
-- Sign-in attempts are limited to 10 per minute per address
+- Sign-in attempts are limited to 10 per minute per address. Clients using the same StartOS proxy share this limit, so repeated attempts can temporarily block other users from signing in
 - Fixes users and agents being able to change records belonging to other users or systems
 - Agent tokens stay masked until you reveal them
 
@@ -34,7 +34,7 @@ export const current = VersionInfo.of({
 
 **Seguridad**
 
-- Los intentos de inicio de sesión se limitan a 10 por minuto por dirección
+- Los intentos de inicio de sesión se limitan a 10 por minuto por dirección. Los clientes que usan el mismo proxy de StartOS comparten este límite; los intentos repetidos pueden impedir temporalmente que otros usuarios inicien sesión
 - Corrige que usuarios y agentes pudieran modificar registros de otros usuarios o sistemas
 - Los tokens de agente permanecen ocultos hasta que los muestres
 
@@ -54,7 +54,7 @@ export const current = VersionInfo.of({
 
 **Sicherheit**
 
-- Anmeldeversuche sind auf 10 pro Minute und Adresse begrenzt
+- Anmeldeversuche sind auf 10 pro Minute und Adresse begrenzt. Clients hinter demselben StartOS-Proxy teilen dieses Limit; wiederholte Versuche können die Anmeldung anderer Benutzer vorübergehend blockieren
 - Behebt, dass Benutzer und Agenten Datensätze anderer Benutzer oder Systeme ändern konnten
 - Agenten-Tokens bleiben verborgen, bis Sie sie einblenden
 
@@ -74,7 +74,7 @@ export const current = VersionInfo.of({
 
 **Bezpieczeństwo**
 
-- Próby logowania są ograniczone do 10 na minutę na adres
+- Próby logowania są ograniczone do 10 na minutę na adres. Klienci korzystający z tego samego proxy StartOS współdzielą ten limit; wielokrotne próby mogą tymczasowo zablokować logowanie innym użytkownikom
 - Naprawiono możliwość zmiany przez użytkowników i agentów rekordów należących do innych użytkowników lub systemów
 - Tokeny agentów pozostają ukryte, dopóki ich nie odsłonisz
 
@@ -94,7 +94,7 @@ export const current = VersionInfo.of({
 
 **Sécurité**
 
-- Les tentatives de connexion sont limitées à 10 par minute et par adresse
+- Les tentatives de connexion sont limitées à 10 par minute et par adresse. Les clients qui utilisent le même proxy StartOS partagent cette limite ; des tentatives répétées peuvent temporairement empêcher d'autres utilisateurs de se connecter
 - Corrige la possibilité pour des utilisateurs et des agents de modifier des enregistrements appartenant à d'autres utilisateurs ou systèmes
 - Les jetons d'agent restent masqués tant que vous ne les révélez pas
 

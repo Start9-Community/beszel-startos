@@ -24,6 +24,8 @@ Machines you actually want to monitor — your laptop, a VPS, another server —
 
 That is the whole setup for monitoring other machines. The rest is only needed if you want Beszel to also report on this service.
 
+**Sign-in rate limit:** Clients using the same StartOS proxy share a limit of 10 sign-in attempts per minute. If Beszel reports too many requests, pause sign-in attempts for a minute before trying again. Repeated attempts by one person can affect others; existing authenticated sessions and agent connections keep working.
+
 ### Setting the address Beszel advertises
 
 Beszel puts an address into the links it generates and the agent install commands it shows you. After install, StartOS asks you to run **Set Primary URL** and choose it. The form preselects a public domain if you have one, HTTPS first, and otherwise this server's `.local` address. Until you choose, and whenever the address you chose is unavailable, Beszel uses that preselected address. Opening the Web UI from StartOS goes to the address you chose.

@@ -173,6 +173,7 @@ Because the fingerprint is inside the backup, a restored agent re-registers as t
 4. **Host integrations require access to their data.** The bundled scratch agent has no systemd service manager or ZFS utilities. Use an agent installed on the monitored host for systemd failure alerts and full ZFS monitoring.
 5. **Storage pool visibility depends on the runtime.** Btrfs reporting uses visible mount and sysfs information; complete host pool visibility from the bundled agent requires native verification.
 6. **ICMP depends on socket permissions.** The scratch agent has no `ping` executable as a fallback. Native StartOS ICMP monitoring requires verification; the package adds no raw-socket privileges.
+7. **Proxied sign-ins share a rate limit.** The hub allows 10 sign-in attempts per minute per authentication method and source address. PocketBase's trusted-proxy headers are unset, so clients using the same StartOS proxy share its address and limit. Repeated attempts by one client can temporarily block another's sign-in. Existing authenticated sessions and agent connections are not subject to this sign-in limit. `TRUSTED_PROXY_IPS` controls trusted-header authentication, not rate-limit client addresses.
 
 ---
 
