@@ -7,6 +7,7 @@ const shape = z.looseObject({
   enabled: z.boolean().catch(false),
   systemName: z.string().catch('StartOS'),
   primarySensor: z.string().catch(''),
+  hubUrl: z.string().catch(''),
 })
 
 export const agentConfigJson = FileHelper.json(
@@ -22,4 +23,9 @@ export const hubPublicKeyFile = FileHelper.string({
 export const universalTokenFile = FileHelper.string({
   base: agentVolume,
   subpath: './universal-token',
+})
+
+export const hubCaCertFile = FileHelper.string({
+  base: agentVolume,
+  subpath: './hub-ca.pem',
 })
