@@ -1,6 +1,7 @@
 import { sdk } from './sdk'
 import {
   agentConfigJson,
+  hubCaCertFile,
   hubPublicKeyFile,
   universalTokenFile,
 } from './fileModels/agentConfig'
@@ -104,6 +105,10 @@ export const main = sdk.setupMain(async ({ effects }) => {
 
   if (!agentConfig?.enabled || !hubPublicKey || !universalToken) return daemons
 
+  const externalHubUrl = agentConfig.hubUrl.trim()
+  const hubCaCert =
+    externalHubUrl && (await hubCaCertFile.read().const(effects))?.trim()
+
   const agentSubcontainer = await sdk.SubContainer.of(
     effects,
     { imageId: 'beszel-agent' },
@@ -121,7 +126,10 @@ export const main = sdk.setupMain(async ({ effects }) => {
         SYSTEM_NAME: agentConfig.systemName,
         KEY_FILE: `${agentMountVolume.mountpoint}/hub.pub`,
         TOKEN_FILE: `${agentMountVolume.mountpoint}/universal-token`,
-        HUB_URL: localHubUrl,
+        HUB_URL: externalHubUrl || localHubUrl,
+        ...(hubCaCert
+          ? { CA_CERT_FILE: `${agentMountVolume.mountpoint}/hub-ca.pem` }
+          : {}),
         ...(agentConfig.primarySensor
           ? { PRIMARY_SENSOR: agentConfig.primarySensor }
           : {}),
@@ -150,6 +158,6 @@ export const main = sdk.setupMain(async ({ effects }) => {
             }
       },
     },
-    requires: [serviceName],
+    requires: externalHubUrl ? [] : [serviceName],
   })
 })

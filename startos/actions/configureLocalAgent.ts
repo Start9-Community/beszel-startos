@@ -2,12 +2,26 @@ import { promises as fs } from 'node:fs'
 import { i18n } from '../i18n'
 import {
   agentConfigJson,
+  hubCaCertFile,
   hubPublicKeyFile,
   universalTokenFile,
 } from '../fileModels/agentConfig'
 import { sdk } from '../sdk'
 
 const { InputSpec, Value } = sdk
+
+function validateHubUrl(value: string | null | undefined): string {
+  const hubUrl = value?.trim() ?? ''
+  if (!hubUrl) return ''
+  try {
+    const { protocol, host } = new URL(hubUrl)
+    if ((protocol !== 'http:' && protocol !== 'https:') || !host)
+      throw new Error()
+  } catch {
+    throw new Error(i18n('External hub URL must be a valid HTTP or HTTPS URL.'))
+  }
+  return hubUrl
+}
 
 const inputSpec = InputSpec.of({
   enabled: Value.toggle({
@@ -31,6 +45,16 @@ const inputSpec = InputSpec.of({
     required: false,
     default: null,
   }),
+  hubUrl: Value.text({
+    name: i18n('External Hub URL'),
+    description: i18n(
+      "Leave blank to report to the hub in this service. To report to a Beszel hub running elsewhere instead, enter its address, for example https://beszel.example.com, and use that hub's public key and token below.",
+    ),
+    required: false,
+    default: null,
+    inputmode: 'url',
+    placeholder: 'https://beszel.example.com',
+  }),
   hubPublicKey: Value.text({
     name: i18n('Hub Public Key'),
     description: i18n(
@@ -47,6 +71,15 @@ const inputSpec = InputSpec.of({
     required: false,
     masked: true,
     default: null,
+  }),
+  hubCaCert: Value.textarea({
+    name: i18n('External Hub CA Certificate'),
+    description: i18n(
+      "Only for an external hub whose HTTPS certificate is issued by a private certificate authority, such as another StartOS server's root CA. Paste that authority's PEM certificate.",
+    ),
+    required: false,
+    default: null,
+    placeholder: '-----BEGIN CERTIFICATE-----',
   }),
 })
 
@@ -72,9 +105,11 @@ export const configureLocalAgent = sdk.Action.withInput(
       enabled: config?.enabled ?? false,
       systemName: config?.systemName || 'StartOS',
       primarySensor: config?.primarySensor || null,
+      hubUrl: config?.hubUrl || null,
       hubPublicKey: (await hubPublicKeyFile.read().once())?.trim() || null,
       // A stored secret is never sent back through the action-input RPC.
       universalToken: null,
+      hubCaCert: (await hubCaCertFile.read().once())?.trim() || null,
     }
   },
 
@@ -88,6 +123,8 @@ export const configureLocalAgent = sdk.Action.withInput(
       (await universalTokenFile.read().once())?.trim() ||
       ''
     const systemName = input.systemName.trim()
+    const hubUrl = validateHubUrl(input.hubUrl)
+    const hubCaCert = input.hubCaCert?.trim() ?? ''
 
     if (input.enabled && (!hubPublicKey || !universalToken || !systemName)) {
       throw new Error(
@@ -101,14 +138,21 @@ export const configureLocalAgent = sdk.Action.withInput(
         i18n('Hub public key must be in OpenSSH authorized_keys format.'),
       )
     }
+    if (hubCaCert && !hubCaCert.includes('-----BEGIN CERTIFICATE-----')) {
+      throw new Error(
+        i18n('External hub CA certificate must be in PEM format.'),
+      )
+    }
 
     await hubPublicKeyFile.write(effects, hubPublicKey)
     await universalTokenFile.write(effects, universalToken)
     await fs.chmod(universalTokenFile.path, 0o600)
+    await hubCaCertFile.write(effects, hubCaCert ? `${hubCaCert}\n` : '')
     await agentConfigJson.merge(effects, {
       enabled: input.enabled,
       systemName: systemName || 'StartOS',
       primarySensor: input.primarySensor?.trim() || '',
+      hubUrl,
     })
 
     return {

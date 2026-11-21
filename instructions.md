@@ -38,7 +38,7 @@ If those links point somewhere you don't want, run **Set Primary URL** again and
 
 Agents from `0.19.0` onward verify the hub's HTTPS certificate. If your chosen Web UI address uses a StartOS certificate or another private certificate authority, copy that authority's PEM certificate to each remote agent and set `CA_CERT_FILE` to its path. For a container agent, mount the certificate into the container and use the container path. Restart the remote agent after changing its configuration.
 
-The bundled local agent connects internally over HTTP and needs no certificate configuration.
+The bundled local agent connects to this service's hub internally and needs no certificate configuration. Pointed at a hub elsewhere, it takes the certificate in its own settings; see [Reporting to a hub elsewhere](#reporting-to-a-hub-elsewhere).
 
 ### Enabling the local agent
 
@@ -55,6 +55,17 @@ Reopening the action never shows you the saved token. Leave that field blank to 
 
 If the system never appears, check this service's Logs tab — a wrong token or public key is reported there. Your token is never written to the logs.
 
+### Reporting to a hub elsewhere
+
+If you already run Beszel somewhere else, the local agent can report this server to that hub instead of the one in this service.
+
+1. In the other hub, copy its universal token and public key from **Settings → Tokens**, as above.
+2. Run **Configure Local Agent**, turn it on, and set **External Hub URL** to the address you open that hub at, for example `https://beszel.example.com`. Paste in that hub's public key and token.
+3. If that hub's HTTPS certificate comes from a private certificate authority — another StartOS server's, for example — paste the authority's PEM certificate into **External Hub CA Certificate**. Leave it blank for a hub with a publicly trusted certificate.
+4. Save. The system appears in the other hub's systems table.
+
+This service's own dashboard keeps running either way; you can simply not use it. Clear **External Hub URL** to report to it again. Moving the agent from one hub to another leaves its old system behind in the first, where you can delete it.
+
 ### Network monitoring
 
 Configure network monitors in the Beszel dashboard and select the agent that should run them. HTTP, TCP, and DNS targets must be reachable from that agent. ICMP availability depends on its operating system permissions and has not been verified for the bundled StartOS agent.
@@ -62,6 +73,8 @@ Configure network monitors in the Beszel dashboard and select the agent that sho
 HTTPS monitors require the target certificate to be trusted by the agent's system CA bundle. The remote-agent `CA_CERT_FILE` setting described above applies only to its connection to the Beszel hub.
 
 ## Limitations
+
+**The local agent's network chart shows only its own traffic.** It can see its own network connection, not the server's, so traffic carried by other services, backups, or the server's gateways does not appear there.
 
 **The local agent can't break its figures down per service.** Its CPU, memory, swap, and disk readings report server totals, but Beszel's Docker-statistics panel stays empty because a StartOS service can't reach the container runtime. Container health alerts and image-update indicators are unavailable for the same reason. Uptime depends on what the service's runtime exposes.
 

@@ -58,6 +58,12 @@ const dict = {
   'Local Agent Configuration Saved': 43,
   'The local agent will start and register automatically.': 44,
   'The local agent is disabled.': 45,
+  'External Hub URL': 47,
+  "Leave blank to report to the hub in this service. To report to a Beszel hub running elsewhere instead, enter its address, for example https://beszel.example.com, and use that hub's public key and token below.": 48,
+  'External hub URL must be a valid HTTP or HTTPS URL.': 49,
+  'External Hub CA Certificate': 50,
+  "Only for an external hub whose HTTPS certificate is issued by a private certificate authority, such as another StartOS server's root CA. Paste that authority's PEM certificate.": 51,
+  'External hub CA certificate must be in PEM format.': 52,
 } as const
 
 /**
