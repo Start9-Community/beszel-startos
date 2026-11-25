@@ -13,9 +13,9 @@ Beszel exposes a **Web UI** interface: the dashboard where you add machines, wat
 
 This package includes Beszel `0.21.2` for both the hub and the bundled agent.
 
-You also get an optional **local agent** — a second process, alongside the dashboard, that monitors this StartOS server. It is off until you configure it; turning it on is the last section of [Getting set up](#getting-set-up).
+Beszel is a hub for watching other machines. The machines you want to monitor (a laptop, a VPS, another server) run Beszel's own agent, installed on them directly exactly as the upstream guide describes. Nothing about that changes here.
 
-Machines you actually want to monitor — your laptop, a VPS, another server — run Beszel's own agent installed on them directly, exactly as the upstream guide describes. Nothing about that changes here.
+You also get an optional **local agent**, a second process alongside the dashboard that monitors this StartOS server. Its CPU, memory, and disk figures are server totals that StartOS already shows; what it adds is their history and Beszel's alerts, not a per-service breakdown (see [Limitations](#limitations)). It is off until you configure it; turning it on is the last section of [Getting set up](#getting-set-up).
 
 ## Getting set up
 
