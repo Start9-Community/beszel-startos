@@ -12,7 +12,7 @@
 [Beszel](https://github.com/henrygd/beszel) is a lightweight server monitoring hub: a web dashboard that collects metrics from agents running on the machines you want to watch. This package runs the hub, and optionally an agent alongside it that monitors the StartOS server itself.
 
 - **Upstream repo:** <https://github.com/henrygd/beszel>
-- **Wrapper repo:** <https://github.com/Start9Labs/beszel-startos>
+- **Wrapper repo:** <https://github.com/Start9-Community/beszel-startos>
 
 ---
 
@@ -35,7 +35,7 @@
 
 ## Image and Container Runtime
 
-Two upstream images, each running its own entrypoint. Both use Beszel `0.21.2`, pinned to immutable multi-architecture image digests in `startos/manifest/index.ts`. The root `Dockerfile` replaces each image's CA bundle with a current one, a temporary layer that comes out once upstream ships images built on a fixed store. The StartOS package version is `0.21.2:1`.
+Two upstream images, each running its own entrypoint. Both use Beszel `0.21.2`, pinned to immutable multi-architecture image digests in `startos/manifest/index.ts`. The root `Dockerfile` replaces each image's CA bundle with a current one, a temporary layer that comes out once upstream ships images built on a fixed store. The StartOS package version is `0.21.2:2`.
 
 The package does not build upstream source and requires no `upstream-project` checkout or Git submodule. Its license and icon are regular files included in this repository.
 
